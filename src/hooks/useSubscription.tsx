@@ -1,120 +1,200 @@
-import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from './useAuth';
+import { useCallback, useEffect, useState } from "react";
 
-interface SubscriptionStatus {
-  subscribed: boolean;
-  free_quota_remaining: number;
-  subscription_status: string;
-  subscription_end?: string;
-}
+import { isMockMode } from "@/config/runtime";
+import { supabase } from "@/integrations/supabase/client";
+import type { Tables } from "@/integrations/supabase/types";
+import type { SubscriptionStatus } from "@/types/flight";
+
+import { useAuth } from "./useAuth";
+
+const mockCheckoutResponse = {
+  url: "mock://checkout",
+};
+
+const createInitialSubscriptionStatus = (): SubscriptionStatus => ({
+  subscribed: false,
+  free_quota_remaining: isMockMode ? 3 : 1,
+  subscription_status: "inactive",
+  subscription_end: null,
+});
+
+type ProfileRecord = Pick<Tables<"profiles">, "free_quota_remaining" | "subscription_status">;
 
 export const useSubscription = () => {
-  const { user } = useAuth();
-  const [subscriptionStatus, setSubscriptionStatus] = useState<SubscriptionStatus>({
-    subscribed: false,
-    free_quota_remaining: 1,
-    subscription_status: 'inactive'
-  });
+  const { user, isMockAuth } = useAuth();
+  const [subscriptionStatus, setSubscriptionStatus] = useState<SubscriptionStatus>(createInitialSubscriptionStatus);
   const [loading, setLoading] = useState(true);
 
-  const checkSubscription = async () => {
+  const checkSubscription = useCallback(async () => {
     if (!user) {
+      setSubscriptionStatus(createInitialSubscriptionStatus());
+      setLoading(false);
+      return;
+    }
+
+    if (isMockAuth) {
+      setSubscriptionStatus((currentStatus) => {
+        const nextSubscriptionStatus = currentStatus.subscribed ? "active" : "inactive";
+        return nextSubscriptionStatus === currentStatus.subscription_status
+          ? currentStatus
+          : {
+              ...currentStatus,
+              subscription_status: nextSubscriptionStatus,
+            };
+      });
       setLoading(false);
       return;
     }
 
     try {
-      const { data, error } = await supabase.functions.invoke('check-subscription');
-      
-      if (error) throw error;
-      
-      setSubscriptionStatus(data);
+      const { data, error } = await supabase.functions.invoke<SubscriptionStatus>("check-subscription");
+
+      if (error) {
+        throw error;
+      }
+
+      const nextStatus = {
+        subscribed: data?.subscribed ?? false,
+        free_quota_remaining: data?.free_quota_remaining ?? 0,
+        subscription_status: data?.subscription_status ?? "inactive",
+        subscription_end: data?.subscription_end ?? null,
+      };
+
+      setSubscriptionStatus(nextStatus);
     } catch (error) {
-      console.error('Error checking subscription:', error);
+      console.error("Error checking subscription:", error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [isMockAuth, user]);
 
   useEffect(() => {
-    checkSubscription();
-    
-    // Refresh subscription status every minute
-    const interval = setInterval(checkSubscription, 60000);
-    
-    return () => clearInterval(interval);
-  }, [user]);
+    void checkSubscription();
 
-  const createCheckout = async () => {
+    if (isMockAuth || !user) {
+      return;
+    }
+
+    const interval = window.setInterval(() => {
+      void checkSubscription();
+    }, 60000);
+
+    return () => window.clearInterval(interval);
+  }, [checkSubscription, isMockAuth, user]);
+
+  const createCheckout = useCallback(async () => {
+    if (isMockAuth) {
+      setSubscriptionStatus((currentStatus) => ({
+        ...currentStatus,
+        subscribed: true,
+        subscription_status: "active",
+        subscription_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+      }));
+      return mockCheckoutResponse;
+    }
+
     try {
-      const { data, error } = await supabase.functions.invoke('create-checkout');
-      
-      if (error) throw error;
-      
-      if (data.url) {
-        window.open(data.url, '_blank');
+      const { data, error } = await supabase.functions.invoke<{ url?: string }>("create-checkout");
+
+      if (error) {
+        throw error;
       }
+
+      if (data?.url) {
+        window.open(data.url, "_blank", "noopener,noreferrer");
+      }
+
+      return data;
     } catch (error) {
-      console.error('Error creating checkout:', error);
+      console.error("Error creating checkout:", error);
       throw error;
     }
-  };
+  }, [isMockAuth]);
 
-  const manageSubscription = async () => {
+  const manageSubscription = useCallback(async () => {
+    if (isMockAuth) {
+      return mockCheckoutResponse;
+    }
+
     try {
-      const { data, error } = await supabase.functions.invoke('customer-portal');
-      
-      if (error) throw error;
-      
-      if (data.url) {
-        window.open(data.url, '_blank');
+      const { data, error } = await supabase.functions.invoke<{ url?: string }>("customer-portal");
+
+      if (error) {
+        throw error;
       }
+
+      if (data?.url) {
+        window.open(data.url, "_blank", "noopener,noreferrer");
+      }
+
+      return data;
     } catch (error) {
-      console.error('Error opening customer portal:', error);
+      console.error("Error opening customer portal:", error);
       throw error;
     }
-  };
+  }, [isMockAuth]);
 
-  const decrementQuota = async () => {
-    if (!user) return false;
+  const decrementQuota = useCallback(async () => {
+    if (!user) {
+      return false;
+    }
 
-    try {
-      const { data: profile, error } = await supabase
-        .from('profiles')
-        .select('free_quota_remaining, subscription_status')
-        .eq('id', user.id)
-        .single();
-
-      if (error) throw error;
-
-      // If subscribed, allow unlimited access
-      if (profile.subscription_status === 'active') {
+    if (isMockAuth) {
+      if (subscriptionStatus.subscribed) {
         return true;
       }
 
-      // If no quota remaining, deny access
-      if (profile.free_quota_remaining <= 0) {
+      if (subscriptionStatus.free_quota_remaining <= 0) {
         return false;
       }
 
-      // Decrement quota
+      setSubscriptionStatus((currentStatus) => ({
+        ...currentStatus,
+        free_quota_remaining: Math.max(0, currentStatus.free_quota_remaining - 1),
+      }));
+      return true;
+    }
+
+    try {
+      const { data: profile, error } = await supabase
+        .from("profiles")
+        .select("free_quota_remaining, subscription_status")
+        .eq("id", user.id)
+        .single<ProfileRecord>();
+
+      if (error) {
+        throw error;
+      }
+
+      if (!profile) {
+        throw new Error("Profile not found");
+      }
+
+      if (profile.subscription_status === "active") {
+        return true;
+      }
+
+      const currentQuota = profile.free_quota_remaining ?? 0;
+      if (currentQuota <= 0) {
+        return false;
+      }
+
       const { error: updateError } = await supabase
-        .from('profiles')
-        .update({ free_quota_remaining: profile.free_quota_remaining - 1 })
-        .eq('id', user.id);
+        .from("profiles")
+        .update({ free_quota_remaining: currentQuota - 1 })
+        .eq("id", user.id);
 
-      if (updateError) throw updateError;
+      if (updateError) {
+        throw updateError;
+      }
 
-      // Refresh subscription status
       await checkSubscription();
-      
       return true;
     } catch (error) {
-      console.error('Error decrementing quota:', error);
+      console.error("Error decrementing quota:", error);
       return false;
     }
-  };
+  }, [checkSubscription, isMockAuth, subscriptionStatus.free_quota_remaining, subscriptionStatus.subscribed, user]);
 
   return {
     ...subscriptionStatus,

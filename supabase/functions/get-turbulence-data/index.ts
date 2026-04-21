@@ -6,6 +6,19 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+interface OpenMeteoWeatherData {
+  current?: {
+    wind_speed_10m?: number;
+    wind_gusts_10m?: number;
+    temperature_2m?: number;
+    cloud_cover?: number;
+  };
+  hourly?: {
+    wind_speed_80m?: number[];
+    wind_speed_120m?: number[];
+  };
+}
+
 // Calculate waypoints along great circle route
 function calculateWaypoints(lat1: number, lon1: number, lat2: number, lon2: number, numWaypoints: number = 15) {
   const waypoints = [];
@@ -43,7 +56,7 @@ function calculateWaypoints(lat1: number, lon1: number, lat2: number, lon2: numb
 }
 
 // Enhanced turbulence scoring based on multiple factors
-function calculateTurbulenceScore(weatherData: any, aircraftType: string = 'A320') {
+function calculateTurbulenceScore(weatherData: OpenMeteoWeatherData, aircraftType: string = 'A320') {
   const windSpeed = weatherData.current.wind_speed_10m || 0;
   const windGusts = weatherData.current.wind_gusts_10m || 0;
   const windSpeed80m = weatherData.hourly.wind_speed_80m?.[0] || windSpeed;
@@ -70,7 +83,7 @@ function calculateTurbulenceScore(weatherData: any, aircraftType: string = 'A320
   );
   
   // Base score from EDR (normalized 0-1)
-  let baseScore = simulatedEDR;
+  const baseScore = simulatedEDR;
   
   // Shear factor contribution (0-0.2)
   const shearFactor = Math.min(0.2, windShear * 0.1);

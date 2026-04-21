@@ -1,8 +1,10 @@
 import { Cloud, AlertTriangle, CheckCircle } from "lucide-react";
 
+import type { TurbulenceLabel } from "@/types/flight";
+
 interface TurbulenceIndicatorProps {
   score: number;
-  label: "Smooth" | "Moderate" | "Severe";
+  label: TurbulenceLabel;
   windSpeed?: number;
   windGusts?: number;
 }

@@ -1,73 +1,104 @@
-# Welcome to your Lovable project
+# SkyShake
 
-## Project info
+SkyShake is a Vite + React + TypeScript app for looking up flights and estimating turbulence risk. The project also includes Supabase Edge Functions for auth, subscription state, checkout, and turbulence/weather lookups.
 
-**URL**: https://lovable.dev/projects/4bdf7061-5343-4bf0-865b-f7171ecffb5c
+## Current assessment
 
-## How can I edit this code?
+This repo was not ready for reliable local debugging when I opened it:
 
-There are several ways of editing your application.
+- the README was still scaffold-level boilerplate
+- the app had no checked-in env template
+- auth state was being subscribed to from multiple hooks
+- the main page mixed UI, quota checks, flight lookup, and turbulence lookup in one component
+- the map only rendered the first route and did not update correctly after subsequent searches
+- several production files still relied on `any`
 
-**Use Lovable**
+The current refactor addresses those issues and adds a mock mode so the UI can be debugged locally even without live Supabase credentials.
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/4bdf7061-5343-4bf0-865b-f7171ecffb5c) and start prompting.
+## Stack
 
-Changes made via Lovable will be committed automatically to this repo.
+- Vite
+- React 18
+- TypeScript
+- Tailwind + shadcn/ui
+- Supabase
+- Capacitor
 
-**Use your preferred IDE**
+## Local debugging
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+### Option 1: debug the UI immediately with mock mode
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+This is the fastest path when you do not have Supabase credentials yet.
 
-Follow these steps:
+1. Copy `.env.example` to `.env.local`
+2. Leave `VITE_APP_MODE=mock`
+3. Install dependencies:
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+npm install
+```
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+4. Start the dev server:
 
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+```sh
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+In mock mode:
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+- auth is bypassed with a local debug user
+- checkout and customer portal are stubbed
+- flight and turbulence data come from local mock generators
+- the UI remains fully navigable for layout and interaction debugging
 
-**Use GitHub Codespaces**
+### Option 2: debug against live Supabase services
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+1. Copy `.env.example` to `.env.local`
+2. Set:
 
-## What technologies are used for this project?
+```sh
+VITE_APP_MODE=live
+VITE_SUPABASE_URL=...
+VITE_SUPABASE_PUBLISHABLE_KEY=...
+```
 
-This project is built with:
+3. Install dependencies and start the dev server:
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+```sh
+npm install
+npm run dev
+```
 
-## How can I deploy this project?
+If you want live subscriptions and checkout to work, you will also need the corresponding Supabase Edge Function secrets and Stripe config in your Supabase project.
 
-Simply open [Lovable](https://lovable.dev/projects/4bdf7061-5343-4bf0-865b-f7171ecffb5c) and click on Share -> Publish.
+## Quality checks
 
-## Can I connect a custom domain to my Lovable project?
+Run the full local check suite:
 
-Yes, you can!
+```sh
+npm run check
+```
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+Or run them separately:
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+```sh
+npm run lint
+npm run typecheck
+npm run build
+```
+
+## Important files
+
+- `src/config/runtime.ts`: runtime mode and env handling
+- `src/providers/AuthProvider.tsx`: single source of truth for auth state
+- `src/hooks/useFlightTracking.ts`: flight search orchestration
+- `src/services/tracking.ts`: live vs mock data access boundary
+- `src/lib/mock-flight-data.ts`: local debug data generators
+- `src/components/debug/RuntimeModeNotice.tsx`: visible app-mode indicator
+
+## Known gaps that still matter
+
+- the project still ships a very large client bundle
+- generated shadcn UI files still emit some low-value fast-refresh warnings
+- the airport coordinate dataset is static and incomplete, so some real-world routes may not render on the map until the dataset is expanded
+- native packaging is no longer tied to a hosted preview, but iOS/Android folders still need to be generated and verified in a real device build workflow

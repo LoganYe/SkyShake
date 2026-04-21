@@ -1,20 +1,9 @@
 import { Calendar, Clock, Plane } from "lucide-react";
 
+import type { FlightData } from "@/types/flight";
+
 interface FlightInfoProps {
-  flightData?: {
-    flightNumber: string;
-    airline: string;
-    departure: string;
-    departureAirport?: string;
-    arrival: string;
-    arrivalAirport?: string;
-    departureTime: string;
-    arrivalTime: string;
-    aircraft: string;
-    status: string;
-    isMockData?: boolean;
-    error?: string;
-  };
+  flightData?: FlightData;
 }
 
 export const FlightInfo = ({ flightData }: FlightInfoProps) => {

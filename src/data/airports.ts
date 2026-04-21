@@ -1,5 +1,11 @@
+import type { AirportCoordinates } from "@/types/flight";
+
+export interface AirportRecord extends AirportCoordinates {
+  name: string;
+}
+
 // Comprehensive airport database with accurate coordinates
-export const airports: Record<string, { lat: number; lon: number; name: string }> = {
+export const airports: Record<string, AirportRecord> = {
   // North America
   'ATL': { lat: 33.6407, lon: -84.4277, name: 'Atlanta Hartsfield-Jackson' },
   'LAX': { lat: 33.9416, lon: -118.4085, name: 'Los Angeles International' },
@@ -100,11 +106,15 @@ export const airports: Record<string, { lat: number; lon: number; name: string }
   'ADD': { lat: 8.9779, lon: 38.7992, name: 'Addis Ababa Bole' },
 };
 
-export const getAirportCoords = (code: string) => {
+export const getAirport = (code: string) => {
+  return airports[code.toUpperCase()] ?? null;
+};
+
+export const getAirportCoords = (code: string): AirportCoordinates | null => {
   const airport = airports[code.toUpperCase()];
   if (airport) {
     return { lat: airport.lat, lon: airport.lon };
   }
   console.warn(`Airport code ${code} not found in database`);
-  return { lat: 0, lon: 0 };
+  return null;
 };
