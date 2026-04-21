@@ -3,9 +3,11 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Download, Smartphone, Check } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { BRAND } from '@/config/brand';
+import type { BeforeInstallPromptEvent } from '@/types/pwa';
 
 const Install = () => {
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isInstalled, setIsInstalled] = useState(false);
   const navigate = useNavigate();
 
@@ -17,7 +19,7 @@ const Install = () => {
 
     const handler = (e: Event) => {
       e.preventDefault();
-      setDeferredPrompt(e);
+      setDeferredPrompt(e as BeforeInstallPromptEvent);
     };
 
     window.addEventListener('beforeinstallprompt', handler);
@@ -48,7 +50,7 @@ const Install = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Smartphone className="h-6 w-6" />
-            Install Turbulence Tracker
+            Install {BRAND.name}
           </CardTitle>
           <CardDescription>
             Install our app for the best experience - works offline and loads faster!
@@ -68,7 +70,7 @@ const Install = () => {
           ) : deferredPrompt ? (
             <div className="space-y-4">
               <p className="text-sm text-muted-foreground">
-                Click the button below to install Turbulence Tracker on your device.
+                Click the button below to install {BRAND.name} on your device.
               </p>
               <Button onClick={handleInstall} className="w-full" size="lg">
                 <Download className="mr-2 h-5 w-5" />

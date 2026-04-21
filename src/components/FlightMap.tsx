@@ -1,8 +1,8 @@
 import { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-// @ts-ignore
-import 'leaflet.geodesic';
+
+import { createGreatCirclePoints } from '@/lib/geo';
 
 interface FlightMapProps {
   departure: { lat: number; lon: number; code: string };
@@ -24,6 +24,9 @@ export const FlightMap = ({
 }: FlightMapProps) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<L.Map | null>(null);
+  const routeLayer = useRef<L.LayerGroup | null>(null);
+  const markerLayer = useRef<L.LayerGroup | null>(null);
+  const turbulenceLayer = useRef<L.LayerGroup | null>(null);
 
   useEffect(() => {
     if (!mapContainer.current || map.current) return;
@@ -39,6 +42,27 @@ export const FlightMap = ({
       attribution: '© OpenStreetMap contributors',
       maxZoom: 19,
     }).addTo(map.current);
+
+    routeLayer.current = L.layerGroup().addTo(map.current);
+    markerLayer.current = L.layerGroup().addTo(map.current);
+    turbulenceLayer.current = L.layerGroup().addTo(map.current);
+
+    return () => {
+      if (map.current) {
+        map.current.remove();
+        map.current = null;
+      }
+    };
+  }, [arrival.lat, arrival.lon, departure.lat, departure.lon]);
+
+  useEffect(() => {
+    if (!map.current || !routeLayer.current || !markerLayer.current || !turbulenceLayer.current) {
+      return;
+    }
+
+    routeLayer.current.clearLayers();
+    markerLayer.current.clearLayers();
+    turbulenceLayer.current.clearLayers();
 
     // Custom icon for airports
     const airportIcon = L.divIcon({
@@ -56,40 +80,34 @@ export const FlightMap = ({
       iconAnchor: [12, 12],
     });
 
-    // Draw flight path using geodesic (great circle route) FIRST
-    // This must be added before markers so it's behind them
-    // @ts-ignore - leaflet.geodesic extends L namespace
-    const geodesicLine = new L.Geodesic(
-      [
-        [departure.lat, departure.lon],
-        [arrival.lat, arrival.lon]
-      ],
-      {
-        color: 'hsl(210 100% 50%)',
-        weight: 3,
-        opacity: 0.7,
-        steps: 100,
-        wrap: false,
-      }
-    ).addTo(map.current);
+    const routePoints = createGreatCirclePoints(
+      { lat: departure.lat, lon: departure.lon },
+      { lat: arrival.lat, lon: arrival.lon },
+      64,
+    ).map((point) => [point.lat, point.lon] as L.LatLngTuple);
+
+    const routeLine = L.polyline(routePoints, {
+      color: 'hsl(210 100% 50%)',
+      weight: 3,
+      opacity: 0.7,
+    }).addTo(routeLayer.current);
 
     // Add departure marker
     L.marker([departure.lat, departure.lon], { icon: airportIcon })
-      .addTo(map.current)
+      .addTo(markerLayer.current)
       .bindPopup(`<b>${departure.code}</b><br>Departure`);
 
     // Add arrival marker
     L.marker([arrival.lat, arrival.lon], { icon: airportIcon })
-      .addTo(map.current)
+      .addTo(markerLayer.current)
       .bindPopup(`<b>${arrival.code}</b><br>Arrival`);
 
     // Add current position if available
     if (currentPosition) {
       L.marker([currentPosition.lat, currentPosition.lon], { icon: planeIcon })
-        .addTo(map.current)
+        .addTo(markerLayer.current)
         .bindPopup('<b>Current Position</b>');
     }
-
 
     // Add turbulence markers if available
     if (turbulenceData && turbulenceData.length > 0) {
@@ -104,21 +122,12 @@ export const FlightMap = ({
           fillColor: color,
           fillOpacity: 0.3,
           radius: 50000, // 50km radius
-        }).addTo(map.current!)
+        }).addTo(turbulenceLayer.current!)
           .bindPopup(`<b>Turbulence: ${point.severity}</b>`);
       });
     }
 
-    // Fit map to show the geodesic route
-    map.current.fitBounds(geodesicLine.getBounds(), { padding: [50, 50] });
-
-    // Cleanup
-    return () => {
-      if (map.current) {
-        map.current.remove();
-        map.current = null;
-      }
-    };
+    map.current.fitBounds(routeLine.getBounds(), { padding: [50, 50] });
   }, [departure, arrival, currentPosition, turbulenceData]);
 
   return (

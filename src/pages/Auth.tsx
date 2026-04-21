@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { isMockMode } from '@/config/runtime';
+import { BRAND } from '@/config/brand';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -24,6 +26,10 @@ const Auth = () => {
   const { toast } = useToast();
 
   useEffect(() => {
+    if (isMockMode) {
+      return;
+    }
+
     // Check if user is already logged in
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
@@ -137,6 +143,36 @@ const Auth = () => {
     setLoading(false);
   };
 
+  if (isMockMode) {
+    return (
+      <div className="min-h-screen bg-gradient-sky flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <div className="flex justify-center mb-4">
+              <div className="bg-gradient-primary p-3 rounded-lg">
+                <Cloud className="w-8 h-8 text-primary-foreground" />
+              </div>
+            </div>
+            <CardTitle className="text-2xl">{BRAND.name} Local Debug Mode</CardTitle>
+            <CardDescription>
+              Authentication is bypassed while the app runs in mock mode, so you can debug the UI without Supabase credentials.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="rounded-lg border border-warning/30 bg-warning/10 p-4 text-sm text-foreground">
+              Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`, then restart `npm run dev` to test real auth flows.
+            </div>
+          </CardContent>
+          <CardFooter>
+            <Button className="w-full" onClick={() => navigate('/')}>
+              Continue to Dashboard
+            </Button>
+          </CardFooter>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-sky flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
@@ -146,8 +182,8 @@ const Auth = () => {
               <Cloud className="w-8 h-8 text-primary-foreground" />
             </div>
           </div>
-          <CardTitle className="text-2xl">Turbulence Tracker</CardTitle>
-          <CardDescription>Sign in to track your flights</CardDescription>
+          <CardTitle className="text-2xl">{BRAND.name}</CardTitle>
+          <CardDescription>{BRAND.tagline}</CardDescription>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="signin" className="w-full">

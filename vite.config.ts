@@ -1,25 +1,23 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
-import { componentTagger } from "lovable-tagger";
 import { VitePWA } from 'vite-plugin-pwa';
 
 // https://vitejs.dev/config/
-export default defineConfig(({ mode }) => ({
+export default defineConfig(() => ({
   server: {
     host: "::",
     port: 8080,
   },
   plugins: [
-    react(), 
-    mode === "development" && componentTagger(),
+    react(),
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
       manifest: {
-        name: 'Turbulence Tracker',
-        short_name: 'TurbTracker',
-        description: 'Track turbulence risk for your flight with real-time weather data and predictive analytics',
+        name: 'SkyShake',
+        short_name: 'SkyShake',
+        description: 'Track turbulence risk across your route with flight-aware weather analysis and segment-level turbulence scoring.',
         theme_color: '#1a1a2e',
         background_color: '#0f0f1e',
         display: 'standalone',
@@ -60,7 +58,7 @@ export default defineConfig(({ mode }) => ({
         ]
       }
     })
-  ].filter(Boolean),
+  ],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),

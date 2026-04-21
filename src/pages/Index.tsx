@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { FlightSearch } from "@/components/FlightSearch";
 import { FlightInfo } from "@/components/FlightInfo";
@@ -6,95 +6,40 @@ import { TurbulenceIndicator } from "@/components/TurbulenceIndicator";
 import { FlightMap } from "@/components/FlightMap";
 import { FlightRoute } from "@/components/FlightRoute";
 import { PaywallModal } from "@/components/PaywallModal";
+import { RuntimeModeNotice } from "@/components/debug/RuntimeModeNotice";
 import { Cloud, LogOut, Crown } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { usePushNotifications } from "@/hooks/usePushNotifications";
-import { useToast } from "@/hooks/use-toast";
+import { BRAND } from "@/config/brand";
 import { getAirportCoords } from "@/data/airports";
+import { getTurbulenceSeverity } from "@/lib/turbulence";
 import { useAuth } from "@/hooks/useAuth";
-import { useSubscription } from "@/hooks/useSubscription";
+import { useFlightTracking } from "@/hooks/useFlightTracking";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
 const Index = () => {
-  const [flightData, setFlightData] = useState<any>(null);
-  const [turbulenceData, setTurbulenceData] = useState<any>(null);
-  const [showPaywall, setShowPaywall] = useState(false);
-  const { sendTurbulenceAlert } = usePushNotifications();
-  const { toast } = useToast();
-  const { user, loading, signOut } = useAuth();
-  const { subscribed, free_quota_remaining, decrementQuota, createCheckout, checkSubscription, manageSubscription } = useSubscription();
+  const { user, loading, signOut, isMockAuth } = useAuth();
+  const {
+    flightData,
+    turbulenceData,
+    isSearching,
+    showPaywall,
+    setShowPaywall,
+    searchFlight,
+    handleUpgrade,
+    subscribed,
+    free_quota_remaining,
+    manageSubscription,
+  } = useFlightTracking();
   const navigate = useNavigate();
+  const departureCoords = flightData ? getAirportCoords(flightData.departure) : null;
+  const arrivalCoords = flightData ? getAirportCoords(flightData.arrival) : null;
 
   // Redirect to auth if not logged in
   useEffect(() => {
-    if (!loading && !user) {
-      navigate('/auth');
+    if (!loading && !user && !isMockAuth) {
+      navigate("/auth");
     }
-  }, [user, loading, navigate]);
-
-  const handleSearchComplete = async (data: any) => {
-    // Check quota before proceeding
-    const hasAccess = await decrementQuota();
-    
-    if (!hasAccess) {
-      setShowPaywall(true);
-      return;
-    }
-
-    setFlightData(data);
-    
-    // Get departure and arrival coordinates
-    const departureCoords = getAirportCoords(data.departure);
-    const arrivalCoords = getAirportCoords(data.arrival);
-
-    try {
-      const { data: turbData, error } = await supabase.functions.invoke('get-turbulence-data', {
-        body: { 
-          departureLat: departureCoords.lat,
-          departureLon: departureCoords.lon,
-          arrivalLat: arrivalCoords.lat,
-          arrivalLon: arrivalCoords.lon,
-          aircraftType: data.aircraft || 'A320'
-        },
-      });
-
-      if (error) throw error;
-
-      setTurbulenceData(turbData);
-
-      // Send alert if turbulence is severe
-      if (turbData.overallScore >= 0.6) {
-        await sendTurbulenceAlert(data.flightNumber, turbData.overallLabel);
-        toast({
-          title: "Turbulence Alert",
-          description: `${turbData.overallLabel} turbulence expected on ${data.flightNumber}`,
-          variant: "destructive",
-        });
-      }
-
-    } catch (error) {
-      console.error("Error fetching turbulence data:", error);
-    }
-  };
-
-  const handleUpgrade = async () => {
-    try {
-      await createCheckout();
-      setShowPaywall(false);
-      
-      // Refresh subscription status after a delay
-      setTimeout(() => {
-        checkSubscription();
-      }, 2000);
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to start checkout process",
-        variant: "destructive",
-      });
-    }
-  };
+  }, [isMockAuth, loading, navigate, user]);
 
   if (loading) {
     return (
@@ -112,7 +57,8 @@ const Index = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-sky">\n      {/* Header */}
+    <div className="min-h-screen bg-gradient-sky">
+      {/* Header */}
       <div className="bg-card/50 backdrop-blur-sm border-b border-border">
         <div className="max-w-4xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
@@ -121,8 +67,8 @@ const Index = () => {
                 <Cloud className="w-6 h-6 text-primary-foreground" />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-foreground">Turbulence Tracker</h1>
-                <p className="text-xs text-muted-foreground">Real-time flight turbulence predictions</p>
+                <h1 className="text-xl font-bold text-foreground">{BRAND.name}</h1>
+                <p className="text-xs text-muted-foreground">{BRAND.tagline}</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -147,10 +93,16 @@ const Index = () => {
                   </Button>
                 </>
               )}
-              <Button variant="ghost" size="sm" onClick={signOut}>
-                <LogOut className="w-4 h-4 mr-2" />
-                Sign Out
-              </Button>
+              {isMockAuth ? (
+                <Badge variant="secondary" className="text-xs">
+                  Local Debug Session
+                </Badge>
+              ) : (
+                <Button variant="ghost" size="sm" onClick={signOut}>
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Sign Out
+                </Button>
+              )}
             </div>
           </div>
         </div>
@@ -158,8 +110,10 @@ const Index = () => {
 
       {/* Main Content */}
       <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
+        <RuntimeModeNotice />
+
         {/* Search Section */}
-        <FlightSearch onSearchComplete={handleSearchComplete} />
+        <FlightSearch isLoading={isSearching} onSearch={searchFlight} />
 
         {/* Results Section - shown after search */}
         {flightData && (
@@ -182,26 +136,32 @@ const Index = () => {
               arrival={flightData.arrival}
             />
 
-            <FlightMap
-              departure={{
-                ...getAirportCoords(flightData.departure),
-                code: flightData.departure
-              }}
-              arrival={{
-                ...getAirportCoords(flightData.arrival),
-                code: flightData.arrival
-              }}
-              currentPosition={
-                flightData.latitude && flightData.longitude
-                  ? { lat: flightData.latitude, lon: flightData.longitude }
-                  : undefined
-              }
-              turbulenceData={turbulenceData?.waypoints?.map((w: any) => ({
-                lat: w.latitude,
-                lon: w.longitude,
-                severity: w.label.toLowerCase()
-              }))}
-            />
+            {departureCoords && arrivalCoords ? (
+              <FlightMap
+                departure={{
+                  ...departureCoords,
+                  code: flightData.departure,
+                }}
+                arrival={{
+                  ...arrivalCoords,
+                  code: flightData.arrival,
+                }}
+                currentPosition={
+                  flightData.latitude !== null && flightData.longitude !== null
+                    ? { lat: flightData.latitude, lon: flightData.longitude }
+                    : undefined
+                }
+                turbulenceData={turbulenceData?.waypoints?.map((waypoint) => ({
+                  lat: waypoint.latitude,
+                  lon: waypoint.longitude,
+                  severity: getTurbulenceSeverity(waypoint.label),
+                }))}
+              />
+            ) : (
+              <div className="rounded-xl border border-warning/30 bg-warning/10 p-4 text-sm text-foreground">
+                Route map is unavailable because one or both airport codes are missing from the local coordinate dataset.
+              </div>
+            )}
           </div>
         )}
 

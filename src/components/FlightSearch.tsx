@@ -2,19 +2,20 @@ import { useState } from "react";
 import { Search, Plane } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
 interface FlightSearchProps {
-  onSearchComplete: (data: any) => void;
+  isLoading?: boolean;
+  onSearch: (flightNumber: string) => Promise<void> | void;
 }
 
-export const FlightSearch = ({ onSearchComplete }: FlightSearchProps) => {
+export const FlightSearch = ({ isLoading = false, onSearch }: FlightSearchProps) => {
   const [flightNumber, setFlightNumber] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
-  const handleSearch = async () => {
+  const handleSearch = async (event?: React.FormEvent) => {
+    event?.preventDefault();
+
     if (!flightNumber.trim()) {
       toast({
         title: "Error",
@@ -24,40 +25,12 @@ export const FlightSearch = ({ onSearchComplete }: FlightSearchProps) => {
       return;
     }
 
-    setIsLoading(true);
-    
-    try {
-      console.log("Searching for flight:", flightNumber);
-      
-      const { data, error } = await supabase.functions.invoke('get-flight-data', {
-        body: { flightNumber: flightNumber.trim() },
-      });
-
-      if (error) throw error;
-
-      console.log("Flight data received:", data);
-      onSearchComplete(data);
-
-      toast({
-        title: "Flight Found",
-        description: `Loaded data for ${data.flightNumber}`,
-      });
-
-    } catch (error) {
-      console.error("Error fetching flight data:", error);
-      toast({
-        title: "Error",
-        description: "Failed to fetch flight data. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
+    await onSearch(flightNumber.trim());
   };
 
   return (
     <div className="w-full max-w-md mx-auto px-4">
-      <div className="bg-card rounded-xl p-6 shadow-2xl border border-border">
+      <form className="bg-card rounded-xl p-6 shadow-2xl border border-border" onSubmit={handleSearch}>
         <div className="flex items-center gap-3 mb-6">
           <div className="bg-primary/10 p-2 rounded-lg">
             <Plane className="w-6 h-6 text-primary" />
@@ -78,7 +51,7 @@ export const FlightSearch = ({ onSearchComplete }: FlightSearchProps) => {
           </div>
           
           <Button 
-            onClick={handleSearch}
+            type="submit"
             disabled={isLoading}
             className="w-full bg-gradient-primary hover:opacity-90 transition-opacity"
           >
@@ -86,7 +59,7 @@ export const FlightSearch = ({ onSearchComplete }: FlightSearchProps) => {
             {isLoading ? "Searching..." : "Check Turbulence"}
           </Button>
         </div>
-      </div>
+      </form>
     </div>
   );
 };

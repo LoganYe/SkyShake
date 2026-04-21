@@ -1,22 +1,9 @@
 import { MapPin, Plane } from "lucide-react";
 
-interface Waypoint {
-  waypoint: number;
-  latitude: number;
-  longitude: number;
-  turbulenceScore: number;
-  label: string;
-  windSpeed: number;
-  windGusts: number;
-  windShear: number;
-  temperature: number;
-  cloudCover: number;
-  cape: number;
-  edr: number;
-}
+import type { TurbulenceWaypoint } from "@/types/flight";
 
 interface FlightRouteProps {
-  waypoints?: Waypoint[];
+  waypoints?: TurbulenceWaypoint[];
   departure?: string;
   arrival?: string;
 }
