@@ -1,0 +1,35 @@
+{
+    "name": "SkyShake",
+    "short_name": "SkyShake",
+    "start_url": ".",
+    "display": "standalone",
+    "background_color": "#07111F",
+    "theme_color": "#45C7FF",
+    "description": "SkyShake uses a Flutter frontend and a separate backend to analyze route turbulence with live weather data.",
+    "orientation": "portrait-primary",
+    "prefer_related_applications": false,
+    "icons": [
+        {
+            "src": "icons/Icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "icons/Icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        },
+        {
+            "src": "icons/Icon-maskable-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "maskable"
+        },
+        {
+            "src": "icons/Icon-maskable-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
+        }
+    ]
+}
