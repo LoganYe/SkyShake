@@ -1,104 +1,86 @@
 # SkyShake
 
-SkyShake is a Vite + React + TypeScript app for looking up flights and estimating turbulence risk. The project also includes Supabase Edge Functions for auth, subscription state, checkout, and turbulence/weather lookups.
+SkyShake now uses a separate Flutter frontend and backend service.
 
-## Current assessment
+That split is intentional. Live third-party requests no longer happen directly in the app, because that design breaks down as soon as a provider needs secrets, rate limits, billing controls, or request normalization.
 
-This repo was not ready for reliable local debugging when I opened it:
+## Current Stack
 
-- the README was still scaffold-level boilerplate
-- the app had no checked-in env template
-- auth state was being subscribed to from multiple hooks
-- the main page mixed UI, quota checks, flight lookup, and turbulence lookup in one component
-- the map only rendered the first route and did not update correctly after subsequent searches
-- several production files still relied on `any`
+- Frontend: Flutter + Dart
+- Backend: Node.js + TypeScript + Fastify
+- Weather provider: Open-Meteo, fetched server-side
+- Flight provider: Aviationstack adapter, disabled until a real access key is configured
+- Map rendering: `flutter_map` + OpenStreetMap tiles
 
-The current refactor addresses those issues and adds a mock mode so the UI can be debugged locally even without live Supabase credentials.
+## What Is Truly Live Right Now
 
-## Stack
+- Route turbulence analysis by airport pair is live, because the backend fetches real Open-Meteo weather data for each waypoint.
+- Flight-number lookup is implemented as a backend endpoint, but it is **not operational until** `AVIATIONSTACK_ACCESS_KEY` is configured.
+- There is no silent mock fallback in the backend path. If the upstream call fails, SkyShake returns an error instead of inventing data.
 
-- Vite
-- React 18
-- TypeScript
-- Tailwind + shadcn/ui
-- Supabase
-- Capacitor
+## Repo Layout
 
-## Local debugging
+- `lib/`: Flutter frontend
+- `backend/`: Node/TypeScript backend service
+- `test/`: Flutter tests
+- `web/`: Flutter web shell
 
-### Option 1: debug the UI immediately with mock mode
+## Local Debug
 
-This is the fastest path when you do not have Supabase credentials yet.
+1. Install Flutter dependencies:
 
-1. Copy `.env.example` to `.env.local`
-2. Leave `VITE_APP_MODE=mock`
-3. Install dependencies:
-
-```sh
-npm install
+```bash
+flutter pub get
 ```
 
-4. Start the dev server:
+2. Install backend dependencies:
 
-```sh
+```bash
+cd backend
+npm install
+cd ..
+```
+
+3. Optional but recommended: copy the backend env template.
+
+```bash
+cp backend/.env.example backend/.env
+```
+
+4. Start the backend:
+
+```bash
+cd backend
 npm run dev
 ```
 
-In mock mode:
+5. Run the Flutter app against the backend:
 
-- auth is bypassed with a local debug user
-- checkout and customer portal are stubbed
-- flight and turbulence data come from local mock generators
-- the UI remains fully navigable for layout and interaction debugging
-
-### Option 2: debug against live Supabase services
-
-1. Copy `.env.example` to `.env.local`
-2. Set:
-
-```sh
-VITE_APP_MODE=live
-VITE_SUPABASE_URL=...
-VITE_SUPABASE_PUBLISHABLE_KEY=...
+```bash
+flutter run -d chrome --dart-define=BACKEND_BASE_URL=http://127.0.0.1:8787
 ```
 
-3. Install dependencies and start the dev server:
+## Validation
 
-```sh
-npm install
-npm run dev
+Frontend:
+
+```bash
+dart format --output=none --set-exit-if-changed .
+flutter analyze
+flutter test
+flutter build web --release --dart-define=BACKEND_BASE_URL=http://127.0.0.1:8787
 ```
 
-If you want live subscriptions and checkout to work, you will also need the corresponding Supabase Edge Function secrets and Stripe config in your Supabase project.
+Backend:
 
-## Quality checks
-
-Run the full local check suite:
-
-```sh
-npm run check
-```
-
-Or run them separately:
-
-```sh
-npm run lint
-npm run typecheck
+```bash
+cd backend
+npm test
 npm run build
 ```
 
-## Important files
+## Critical Notes
 
-- `src/config/runtime.ts`: runtime mode and env handling
-- `src/providers/AuthProvider.tsx`: single source of truth for auth state
-- `src/hooks/useFlightTracking.ts`: flight search orchestration
-- `src/services/tracking.ts`: live vs mock data access boundary
-- `src/lib/mock-flight-data.ts`: local debug data generators
-- `src/components/debug/RuntimeModeNotice.tsx`: visible app-mode indicator
-
-## Known gaps that still matter
-
-- the project still ships a very large client bundle
-- generated shadcn UI files still emit some low-value fast-refresh warnings
-- the airport coordinate dataset is static and incomplete, so some real-world routes may not render on the map until the dataset is expanded
-- native packaging is no longer tied to a hosted preview, but iOS/Android folders still need to be generated and verified in a real device build workflow
+- “Real data” still does **not** mean “ground truth turbulence.” The weather is real; the turbulence score is still SkyShake’s model.
+- Without a paid or configured flight-data provider key, you do **not** have real flight-number lookup yet.
+- The current live route endpoint still analyzes airport-to-airport geometry, not a validated provider route track.
