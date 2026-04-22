@@ -1,7 +1,10 @@
 import Fastify from 'fastify';
 import { ZodError } from 'zod';
 
-import { AviationStackClient } from './clients/aviationstack-client.js';
+import {
+  createFlightLookupProvider,
+  type FlightLookupProvider,
+} from './clients/flight-lookup-provider.js';
 import { OpenMeteoClient } from './clients/open-meteo-client.js';
 import { readConfig, type BackendConfig } from './config.js';
 import {
@@ -13,7 +16,7 @@ import { analyzeRouteWithWeather, type WeatherProvider } from './services/turbul
 
 interface BuildAppDependencies {
   weatherProvider?: WeatherProvider;
-  aviationStackClient?: AviationStackClient;
+  flightLookupProvider?: FlightLookupProvider;
 }
 
 export function buildApp(
@@ -23,8 +26,8 @@ export function buildApp(
   const app = Fastify({ logger: false });
   const openMeteoClient =
     dependencies.weatherProvider ?? new OpenMeteoClient();
-  const aviationStackClient =
-    dependencies.aviationStackClient ?? new AviationStackClient(config);
+  const flightLookupProvider =
+    dependencies.flightLookupProvider ?? createFlightLookupProvider(config);
 
   app.setErrorHandler((error, _request, reply) => {
     if (error instanceof ApiError) {
@@ -50,8 +53,16 @@ export function buildApp(
       ok: true,
       flightProvider: config.flightProvider,
       flightProviderConfigured:
-        config.flightProvider === 'aviationstack'
-          ? Boolean(config.aviationStackAccessKey)
+        config.flightProvider === 'aerodatabox'
+          ? Boolean(config.aeroDataBox.apiKey)
+          : false,
+      flightProviderMarketplace:
+        config.flightProvider === 'aerodatabox'
+          ? config.aeroDataBox.marketplace
+          : null,
+      flightPlanEnabled:
+        config.flightProvider === 'aerodatabox'
+          ? config.aeroDataBox.enableFlightPlan
           : false,
       weatherProvider: 'open-meteo',
     };
@@ -64,7 +75,7 @@ export function buildApp(
 
   app.get('/v1/flights/search', async (request) => {
     const query = flightLookupQuerySchema.parse(request.query);
-    const result = await aviationStackClient.lookupFlight(
+    const result = await flightLookupProvider.lookupFlight(
       query.flightNumber,
       query.flightDate,
     );

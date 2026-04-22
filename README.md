@@ -9,14 +9,15 @@ That split is intentional. Live third-party requests no longer happen directly i
 - Frontend: Flutter + Dart
 - Backend: Node.js + TypeScript + Fastify
 - Weather provider: Open-Meteo, fetched server-side
-- Flight provider: Aviationstack adapter, disabled until a real access key is configured
+- Flight provider: AeroDataBox via RapidAPI by default
 - Map rendering: `flutter_map` + OpenStreetMap tiles
 
 ## What Is Truly Live Right Now
 
 - Route turbulence analysis by airport pair is live, because the backend fetches real Open-Meteo weather data for each waypoint.
-- Flight-number lookup is implemented as a backend endpoint, but it is **not operational until** `AVIATIONSTACK_ACCESS_KEY` is configured.
+- Flight-number lookup is implemented as a backend endpoint backed by AeroDataBox. It is only live when `FLIGHT_PROVIDER=aerodatabox` and `AERODATABOX_API_KEY` are configured.
 - There is no silent mock fallback in the backend path. If the upstream call fails, SkyShake returns an error instead of inventing data.
+- Live location and schedule fields are still provider-dependent. Some flights return schedule-only data or partial airport timing data.
 
 ## Repo Layout
 
@@ -45,6 +46,15 @@ cd ..
 
 ```bash
 cp backend/.env.example backend/.env
+```
+
+Recommended backend env for local development:
+
+```bash
+FLIGHT_PROVIDER=aerodatabox
+AERODATABOX_MARKETPLACE=rapidapi
+AERODATABOX_API_KEY=your-key-here
+AERODATABOX_ENABLE_FLIGHT_PLAN=false
 ```
 
 4. Start the backend:
@@ -82,5 +92,7 @@ npm run build
 ## Critical Notes
 
 - “Real data” still does **not** mean “ground truth turbulence.” The weather is real; the turbulence score is still SkyShake’s model.
-- Without a paid or configured flight-data provider key, you do **not** have real flight-number lookup yet.
+- AeroDataBox is used here as a cost-sensitive provider, not as an operational aviation-grade source of truth.
+- Flight-plan enrichment is wired behind config only and stays off by default, because it adds coverage limits and quota cost.
+- Without a configured `AERODATABOX_API_KEY`, you do **not** have real flight-number lookup yet.
 - The current live route endpoint still analyzes airport-to-airport geometry, not a validated provider route track.

@@ -3,6 +3,18 @@ import { describe, expect, test } from 'vitest';
 import { buildApp } from '../src/app.js';
 import type { WeatherProvider } from '../src/services/turbulence.js';
 
+const noFlightProviderConfig = {
+  host: '127.0.0.1',
+  port: 8787,
+  flightProvider: 'none' as const,
+  aeroDataBox: {
+    marketplace: 'rapidapi' as const,
+    apiKey: null,
+    host: null,
+    enableFlightPlan: false,
+  },
+};
+
 describe('route analysis endpoint', () => {
   test('returns validated analysis payloads', async () => {
     const weatherProvider: WeatherProvider = {
@@ -19,12 +31,7 @@ describe('route analysis endpoint', () => {
       },
     };
 
-    const app = buildApp({
-      host: '127.0.0.1',
-      port: 8787,
-      flightProvider: 'none',
-      aviationStackAccessKey: null,
-    }, { weatherProvider });
+    const app = buildApp(noFlightProviderConfig, { weatherProvider });
 
     const response = await app.inject({
       method: 'POST',
@@ -57,12 +64,7 @@ describe('route analysis endpoint', () => {
   });
 
   test('returns 400 for invalid request payloads', async () => {
-    const app = buildApp({
-      host: '127.0.0.1',
-      port: 8787,
-      flightProvider: 'none',
-      aviationStackAccessKey: null,
-    });
+    const app = buildApp(noFlightProviderConfig);
 
     const response = await app.inject({
       method: 'POST',

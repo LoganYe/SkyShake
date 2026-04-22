@@ -22,8 +22,8 @@ export interface FlightDataPayload {
   departureAirport: string | null;
   arrival: string;
   arrivalAirport: string | null;
-  departureTime: string;
-  arrivalTime: string;
+  departureTime: string | null;
+  arrivalTime: string | null;
   aircraft: string;
   status: string;
   latitude: number | null;

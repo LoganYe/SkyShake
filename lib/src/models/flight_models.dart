@@ -67,6 +67,14 @@ int _toInt(dynamic value, {int fallback = 0}) {
   return int.tryParse(value.toString()) ?? fallback;
 }
 
+DateTime? _toDateTime(dynamic value) {
+  if (value == null) {
+    return null;
+  }
+
+  return DateTime.tryParse(value.toString());
+}
+
 class FlightData {
   const FlightData({
     required this.flightNumber,
@@ -95,13 +103,8 @@ class FlightData {
       departureAirport: json['departureAirport']?.toString(),
       arrival: json['arrival']?.toString() ?? 'N/A',
       arrivalAirport: json['arrivalAirport']?.toString(),
-      departureTime: DateTime.parse(
-        json['departureTime']?.toString() ?? DateTime.now().toIso8601String(),
-      ),
-      arrivalTime: DateTime.parse(
-        json['arrivalTime']?.toString() ??
-            DateTime.now().add(const Duration(hours: 2)).toIso8601String(),
-      ),
+      departureTime: _toDateTime(json['departureTime']),
+      arrivalTime: _toDateTime(json['arrivalTime']),
       aircraft: json['aircraft']?.toString() ?? 'Unknown',
       status: json['status']?.toString() ?? 'scheduled',
       latitude: _toDouble(json['latitude']),
@@ -119,8 +122,8 @@ class FlightData {
   final String? departureAirport;
   final String arrival;
   final String? arrivalAirport;
-  final DateTime departureTime;
-  final DateTime arrivalTime;
+  final DateTime? departureTime;
+  final DateTime? arrivalTime;
   final String aircraft;
   final String status;
   final double? latitude;
@@ -143,8 +146,8 @@ class FlightData {
       'departureAirport': departureAirport,
       'arrival': arrival,
       'arrivalAirport': arrivalAirport,
-      'departureTime': departureTime.toIso8601String(),
-      'arrivalTime': arrivalTime.toIso8601String(),
+      'departureTime': departureTime?.toIso8601String(),
+      'arrivalTime': arrivalTime?.toIso8601String(),
       'aircraft': aircraft,
       'status': status,
       'latitude': latitude,

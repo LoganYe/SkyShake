@@ -37,6 +37,23 @@ void main() {
       expect(flight.isUnavailable, isFalse);
       expect(flight.toJson()['flightNumber'], 'UA857');
     });
+
+    test('does not invent schedule timestamps when the backend omits them', () {
+      final flight = FlightData.fromJson({
+        'flightNumber': 'UA857',
+        'airline': 'United Airlines',
+        'departure': 'SFO',
+        'arrival': 'JFK',
+        'aircraft': 'Boeing 777-300ER',
+        'status': 'Expected',
+        'isMockData': false,
+      });
+
+      expect(flight.departureTime, isNull);
+      expect(flight.arrivalTime, isNull);
+      expect(flight.toJson()['departureTime'], isNull);
+      expect(flight.toJson()['arrivalTime'], isNull);
+    });
   });
 
   group('TurbulenceReport', () {

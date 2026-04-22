@@ -12,11 +12,12 @@ class FlightSummaryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final dateFormat = DateFormat('MMM d, y');
     final timeFormat = DateFormat('HH:mm');
-    final duration = flightData.arrivalTime.difference(
-      flightData.departureTime,
-    );
-    final hours = duration.inHours;
-    final minutes = duration.inMinutes.remainder(60);
+    final duration =
+        flightData.departureTime != null && flightData.arrivalTime != null
+            ? flightData.arrivalTime!.difference(flightData.departureTime!)
+            : null;
+    final hours = duration?.inHours ?? 0;
+    final minutes = duration?.inMinutes.remainder(60) ?? 0;
 
     return Card(
       child: Padding(
@@ -61,7 +62,7 @@ class FlightSummaryCard extends StatelessWidget {
                     heading: 'Departure',
                     code: flightData.departure,
                     detail:
-                        '${flightData.departureAirport ?? flightData.departure} · ${timeFormat.format(flightData.departureTime)}',
+                        '${flightData.departureAirport ?? flightData.departure} · ${_formatTime(timeFormat, flightData.departureTime)}',
                   ),
                 ),
                 const Padding(
@@ -73,7 +74,7 @@ class FlightSummaryCard extends StatelessWidget {
                     heading: 'Arrival',
                     code: flightData.arrival,
                     detail:
-                        '${flightData.arrivalAirport ?? flightData.arrival} · ${timeFormat.format(flightData.arrivalTime)}',
+                        '${flightData.arrivalAirport ?? flightData.arrival} · ${_formatTime(timeFormat, flightData.arrivalTime)}',
                     alignEnd: true,
                   ),
                 ),
@@ -86,9 +87,18 @@ class FlightSummaryCard extends StatelessWidget {
               children: [
                 _MetaPill(
                   icon: Icons.calendar_today,
-                  label: dateFormat.format(flightData.departureTime),
+                  label:
+                      flightData.departureTime != null
+                          ? dateFormat.format(flightData.departureTime!)
+                          : 'Date unavailable',
                 ),
-                _MetaPill(icon: Icons.schedule, label: '${hours}h ${minutes}m'),
+                _MetaPill(
+                  icon: Icons.schedule,
+                  label:
+                      duration != null
+                          ? '${hours}h ${minutes}m'
+                          : 'Duration unavailable',
+                ),
                 _MetaPill(
                   icon: Icons.precision_manufacturing,
                   label: flightData.aircraft,
@@ -99,6 +109,10 @@ class FlightSummaryCard extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  String _formatTime(DateFormat formatter, DateTime? value) {
+    return value != null ? formatter.format(value) : '--:--';
   }
 }
 
