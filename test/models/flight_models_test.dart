@@ -56,6 +56,71 @@ void main() {
     });
   });
 
+  group('FlightLookupResult', () {
+    test('parses flight lookup payloads with diagnostics metadata', () {
+      final result = FlightLookupResult.fromJson({
+        'flightNumber': 'UA857',
+        'flightDate': '2026-04-21',
+        'flight': {
+          'flightNumber': 'UA857',
+          'airline': 'United Airlines',
+          'departure': 'SFO',
+          'departureAirport': 'San Francisco International Airport',
+          'arrival': 'PVG',
+          'arrivalAirport': 'Shanghai Pudong International Airport',
+          'departureTime': '2026-04-21T20:01:00Z',
+          'arrivalTime': '2026-04-22T09:25:00Z',
+          'aircraft': 'Boeing 777-300',
+          'status': 'EnRoute',
+          'latitude': null,
+          'longitude': null,
+          'altitude': null,
+          'velocity': null,
+          'isMockData': false,
+          'error': null,
+        },
+        'notFound': false,
+        'meta': {
+          'provider': 'aerodatabox',
+          'source': 'cache',
+          'partial': true,
+          'missingFields': ['location'],
+          'cachedAt': '2026-04-21T20:02:00Z',
+          'expiresAt': '2026-04-21T20:03:00Z',
+        },
+      });
+
+      expect(result.flightNumber, 'UA857');
+      expect(result.flightDate, DateTime.parse('2026-04-21'));
+      expect(result.flight?.status, 'EnRoute');
+      expect(result.metadata.provider, 'aerodatabox');
+      expect(result.metadata.source, FlightLookupSource.cache);
+      expect(result.metadata.partial, isTrue);
+      expect(result.metadata.missingFields, ['location']);
+    });
+
+    test('keeps honest no-result responses without inventing a flight', () {
+      final result = FlightLookupResult.fromJson({
+        'flightNumber': 'ZZ0000',
+        'flightDate': null,
+        'flight': null,
+        'notFound': true,
+        'meta': {
+          'provider': 'aerodatabox',
+          'source': 'live',
+          'partial': false,
+          'missingFields': [],
+          'cachedAt': null,
+          'expiresAt': null,
+        },
+      });
+
+      expect(result.notFound, isTrue);
+      expect(result.flight, isNull);
+      expect(result.hasFlight, isFalse);
+    });
+  });
+
   group('TurbulenceReport', () {
     test('parses waypoints and total fallback correctly', () {
       final report = TurbulenceReport.fromJson({

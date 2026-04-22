@@ -4,9 +4,20 @@ import 'package:intl/intl.dart';
 import '../models/flight_models.dart';
 
 class FlightSummaryCard extends StatelessWidget {
-  const FlightSummaryCard({super.key, required this.flightData});
+  const FlightSummaryCard({
+    super.key,
+    required this.flightData,
+    this.headerLabel,
+    this.supportingText,
+    this.diagnosticChips = const <Widget>[],
+    this.footer,
+  });
 
   final FlightData flightData;
+  final String? headerLabel;
+  final String? supportingText;
+  final List<Widget> diagnosticChips;
+  final Widget? footer;
 
   @override
   Widget build(BuildContext context) {
@@ -32,6 +43,13 @@ class FlightSummaryCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      if (headerLabel != null) ...[
+                        Text(
+                          headerLabel!,
+                          style: Theme.of(context).textTheme.titleSmall,
+                        ),
+                        const SizedBox(height: 6),
+                      ],
                       Text(
                         flightData.flightNumber,
                         style: Theme.of(context).textTheme.headlineSmall,
@@ -41,6 +59,13 @@ class FlightSummaryCard extends StatelessWidget {
                         flightData.airline,
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
+                      if (supportingText != null) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          supportingText!,
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                      ],
                       if (flightData.error != null) ...[
                         const SizedBox(height: 8),
                         Text(
@@ -105,6 +130,11 @@ class FlightSummaryCard extends StatelessWidget {
                 ),
               ],
             ),
+            if (diagnosticChips.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              Wrap(spacing: 10, runSpacing: 10, children: diagnosticChips),
+            ],
+            if (footer != null) ...[const SizedBox(height: 16), footer!],
           ],
         ),
       ),

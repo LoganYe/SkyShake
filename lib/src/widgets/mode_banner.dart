@@ -31,13 +31,14 @@ class ModeBanner extends StatelessWidget {
                   ),
                   const SizedBox(height: 14),
                   Text(
-                    'Not yet',
+                    'Also live',
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'Flight-number lookup stays out of the main promise until '
-                    'a real provider key is configured and validated.',
+                    'Flight-number lookup now runs through the backend and '
+                    'AeroDataBox. Some flights still come back with partial '
+                    'schedule-only data or no live position.',
                   ),
                 ],
               ),

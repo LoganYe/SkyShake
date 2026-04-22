@@ -25,7 +25,7 @@ class SearchPanel extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Try the live preview',
+              'Analyze a route',
               style: Theme.of(context).textTheme.headlineSmall,
             ),
             const SizedBox(height: 8),
@@ -42,10 +42,11 @@ class SearchPanel extends StatelessWidget {
                 SizedBox(
                   width: 180,
                   child: TextField(
+                    key: const Key('route-departure-field'),
                     controller: departureController,
                     textCapitalization: TextCapitalization.characters,
                     decoration: const InputDecoration(
-                      labelText: 'Departure',
+                      labelText: 'Route departure',
                       hintText: 'SFO',
                     ),
                     onSubmitted: (_) => onSearch(),
@@ -54,10 +55,11 @@ class SearchPanel extends StatelessWidget {
                 SizedBox(
                   width: 180,
                   child: TextField(
+                    key: const Key('route-arrival-field'),
                     controller: arrivalController,
                     textCapitalization: TextCapitalization.characters,
                     decoration: const InputDecoration(
-                      labelText: 'Arrival',
+                      labelText: 'Route arrival',
                       hintText: 'JFK',
                     ),
                     onSubmitted: (_) => onSearch(),
@@ -66,15 +68,17 @@ class SearchPanel extends StatelessWidget {
                 SizedBox(
                   width: 280,
                   child: TextField(
+                    key: const Key('route-aircraft-field'),
                     controller: aircraftController,
                     decoration: const InputDecoration(
-                      labelText: 'Aircraft',
+                      labelText: 'Route aircraft',
                       hintText: 'Boeing 787-9',
                     ),
                     onSubmitted: (_) => onSearch(),
                   ),
                 ),
                 FilledButton(
+                  key: const Key('route-analysis-submit'),
                   onPressed: isLoading ? null : onSearch,
                   child: Row(
                     mainAxisSize: MainAxisSize.min,

@@ -75,6 +75,19 @@ DateTime? _toDateTime(dynamic value) {
   return DateTime.tryParse(value.toString());
 }
 
+List<String> _toStringList(dynamic value) {
+  if (value is List) {
+    return value
+        .map((entry) => entry?.toString())
+        .whereType<String>()
+        .map((entry) => entry.trim())
+        .where((entry) => entry.isNotEmpty)
+        .toList(growable: false);
+  }
+
+  return const <String>[];
+}
+
 class FlightData {
   const FlightData({
     required this.flightNumber,
@@ -138,6 +151,8 @@ class FlightData {
       departure.toUpperCase() == 'N/A' ||
       arrival.toUpperCase() == 'N/A';
 
+  bool get hasLocation => latitude != null && longitude != null;
+
   Map<String, dynamic> toJson() {
     return {
       'flightNumber': flightNumber,
@@ -156,6 +171,122 @@ class FlightData {
       'velocity': velocity,
       'isMockData': isMockData,
       'error': error,
+    };
+  }
+}
+
+enum FlightLookupSource { live, cache }
+
+extension FlightLookupSourceX on FlightLookupSource {
+  String get displayName {
+    switch (this) {
+      case FlightLookupSource.live:
+        return 'Live';
+      case FlightLookupSource.cache:
+        return 'Cache';
+    }
+  }
+
+  static FlightLookupSource fromString(String value) {
+    switch (value.trim().toLowerCase()) {
+      case 'live':
+        return FlightLookupSource.live;
+      case 'cache':
+        return FlightLookupSource.cache;
+      default:
+        throw FormatException('Unsupported flight lookup source: $value');
+    }
+  }
+}
+
+class FlightLookupMetadata {
+  const FlightLookupMetadata({
+    required this.provider,
+    required this.source,
+    required this.partial,
+    required this.missingFields,
+    required this.cachedAt,
+    required this.expiresAt,
+  });
+
+  factory FlightLookupMetadata.fromJson(Map<String, dynamic> json) {
+    return FlightLookupMetadata(
+      provider: json['provider']?.toString() ?? 'unknown',
+      source: FlightLookupSourceX.fromString(
+        json['source']?.toString() ?? 'live',
+      ),
+      partial: json['partial'] == true,
+      missingFields: _toStringList(json['missingFields']),
+      cachedAt: _toDateTime(json['cachedAt']),
+      expiresAt: _toDateTime(json['expiresAt']),
+    );
+  }
+
+  final String provider;
+  final FlightLookupSource source;
+  final bool partial;
+  final List<String> missingFields;
+  final DateTime? cachedAt;
+  final DateTime? expiresAt;
+
+  Map<String, dynamic> toJson() {
+    return {
+      'provider': provider,
+      'source': source.name,
+      'partial': partial,
+      'missingFields': missingFields,
+      'cachedAt': cachedAt?.toIso8601String(),
+      'expiresAt': expiresAt?.toIso8601String(),
+    };
+  }
+}
+
+class FlightLookupResult {
+  const FlightLookupResult({
+    required this.flightNumber,
+    required this.flightDate,
+    required this.flight,
+    required this.notFound,
+    required this.metadata,
+  });
+
+  factory FlightLookupResult.fromJson(Map<String, dynamic> json) {
+    final rawFlight = json['flight'];
+    Map<String, dynamic>? flightPayload;
+    if (rawFlight is Map<String, dynamic>) {
+      flightPayload = rawFlight;
+    } else if (rawFlight is Map) {
+      flightPayload = Map<String, dynamic>.from(rawFlight);
+    }
+
+    return FlightLookupResult(
+      flightNumber: json['flightNumber']?.toString() ?? 'Unknown',
+      flightDate: _toDateTime(json['flightDate']),
+      flight: flightPayload == null ? null : FlightData.fromJson(flightPayload),
+      notFound: json['notFound'] == true,
+      metadata: FlightLookupMetadata.fromJson(
+        Map<String, dynamic>.from(
+          (json['meta'] as Map?) ?? const <String, dynamic>{},
+        ),
+      ),
+    );
+  }
+
+  final String flightNumber;
+  final DateTime? flightDate;
+  final FlightData? flight;
+  final bool notFound;
+  final FlightLookupMetadata metadata;
+
+  bool get hasFlight => flight != null;
+
+  Map<String, dynamic> toJson() {
+    return {
+      'flightNumber': flightNumber,
+      'flightDate': flightDate?.toIso8601String(),
+      'flight': flight?.toJson(),
+      'notFound': notFound,
+      'meta': metadata.toJson(),
     };
   }
 }

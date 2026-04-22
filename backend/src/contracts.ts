@@ -34,6 +34,31 @@ export interface FlightDataPayload {
   error: string | null;
 }
 
+export interface FlightLookupMetadataPayload {
+  provider: string;
+  source: 'live' | 'cache';
+  partial: boolean;
+  missingFields: string[];
+  cachedAt: string | null;
+  expiresAt: string | null;
+}
+
+export interface FlightLookupResponsePayload {
+  flightNumber: string;
+  flightDate: string | null;
+  flight: FlightDataPayload | null;
+  notFound: boolean;
+  meta: FlightLookupMetadataPayload;
+}
+
+export interface ErrorResponsePayload {
+  error: string;
+  code: string;
+  provider?: string;
+  retryable?: boolean;
+  retryAfterSeconds?: number;
+}
+
 export interface TurbulenceWaypointPayload {
   waypoint: number;
   latitude: number;

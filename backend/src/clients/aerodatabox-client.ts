@@ -1,6 +1,10 @@
 import type { BackendConfig } from '../config.js';
 import type { FlightDataPayload } from '../contracts.js';
-import { ConfigurationError, UpstreamServiceError } from '../errors.js';
+import {
+  ConfigurationError,
+  RateLimitError,
+  UpstreamServiceError,
+} from '../errors.js';
 
 import type { FlightLookupProvider } from './flight-lookup-provider.js';
 
@@ -25,12 +29,14 @@ export class AeroDataBoxClient implements FlightLookupProvider {
     if (this.config.flightProvider !== 'aerodatabox') {
       throw new ConfigurationError(
         'Flight lookup is disabled because FLIGHT_PROVIDER is not set to aerodatabox.',
+        { provider: this.config.flightProvider },
       );
     }
 
     if (!this.config.aeroDataBox.apiKey) {
       throw new ConfigurationError(
         'Flight lookup is disabled because AERODATABOX_API_KEY is missing.',
+        { provider: 'aerodatabox' },
       );
     }
 
@@ -59,16 +65,26 @@ export class AeroDataBoxClient implements FlightLookupProvider {
           payload,
           rawText,
         ),
+        {
+          code: 'provider_auth_failed',
+          provider: 'aerodatabox',
+        },
       );
     }
 
     if (response.status === 429) {
-      throw new UpstreamServiceError(
+      throw new RateLimitError(
         buildErrorMessage(
           'AeroDataBox rate limit exceeded.',
           payload,
           rawText,
         ),
+        {
+          provider: 'aerodatabox',
+          retryAfterSeconds: parseRetryAfterSeconds(
+            response.headers.get('retry-after'),
+          ),
+        },
       );
     }
 
@@ -79,11 +95,21 @@ export class AeroDataBoxClient implements FlightLookupProvider {
           payload,
           rawText,
         ),
+        {
+          code: 'provider_request_failed',
+          provider: 'aerodatabox',
+        },
       );
     }
 
     if (!Array.isArray(payload)) {
-      throw new UpstreamServiceError('AeroDataBox returned an invalid response.');
+      throw new UpstreamServiceError(
+        'AeroDataBox returned an invalid response.',
+        {
+          code: 'provider_payload_invalid',
+          provider: 'aerodatabox',
+        },
+      );
     }
 
     const selectedFlight = pickBestFlight(
@@ -371,6 +397,29 @@ function buildErrorMessage(
 ) {
   const providerMessage = extractErrorMessage(payload, rawText);
   return providerMessage ? `${baseMessage} ${providerMessage}` : baseMessage;
+}
+
+function parseRetryAfterSeconds(value: string | null) {
+  if (!value) {
+    return null;
+  }
+
+  const parsedSeconds = Number(value);
+  if (Number.isFinite(parsedSeconds) && parsedSeconds >= 0) {
+    return Math.ceil(parsedSeconds);
+  }
+
+  const parsedDate = new Date(value);
+  if (Number.isNaN(parsedDate.getTime())) {
+    return null;
+  }
+
+  const deltaMs = parsedDate.getTime() - Date.now();
+  if (deltaMs <= 0) {
+    return null;
+  }
+
+  return Math.ceil(deltaMs / 1000);
 }
 
 function statusRank(status: string | null) {

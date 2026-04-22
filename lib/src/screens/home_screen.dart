@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 
+import '../core/airport_catalog.dart';
 import '../core/app_theme.dart';
 import '../core/brand.dart';
+import '../models/flight_models.dart';
 import '../repositories/tracking_repository.dart';
+import '../widgets/flight_lookup_panel.dart';
+import '../widgets/flight_lookup_result_card.dart';
 import '../widgets/flight_summary_card.dart';
 import '../widgets/mode_banner.dart';
 import '../widgets/route_analysis_card.dart';
@@ -20,17 +24,24 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  final _flightNumberController = TextEditingController(text: 'UA857');
   final _departureController = TextEditingController(text: 'SFO');
   final _arrivalController = TextEditingController(text: 'JFK');
   final _aircraftController = TextEditingController(text: 'Boeing 787-9');
-  final _previewKey = GlobalKey();
+  final _flightLookupKey = GlobalKey();
+  final _routeFormKey = GlobalKey();
 
+  DateTime? _selectedFlightDate = DateUtils.dateOnly(DateTime.now());
+  FlightLookupResult? _flightLookup;
+  TrackingException? _flightLookupError;
+  bool _isLookingUpFlight = false;
   RouteAnalysisResult? _analysis;
   String? _errorMessage;
   bool _isAnalyzing = false;
 
   @override
   void dispose() {
+    _flightNumberController.dispose();
     _departureController.dispose();
     _arrivalController.dispose();
     _aircraftController.dispose();
@@ -80,8 +91,84 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Future<void> _scrollToPreview() async {
-    final targetContext = _previewKey.currentContext;
+  Future<void> _handleFlightLookup() async {
+    FocusScope.of(context).unfocus();
+
+    setState(() {
+      _isLookingUpFlight = true;
+      _flightLookup = null;
+      _flightLookupError = null;
+    });
+
+    try {
+      final result = await widget.repository.lookupFlight(
+        FlightLookupQuery(
+          flightNumber: _flightNumberController.text,
+          flightDate: _selectedFlightDate,
+        ),
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _flightLookup = result;
+      });
+
+      if (result.notFound) {
+        _showMessage('No provider match found for ${result.flightNumber}.');
+      }
+    } on TrackingException catch (error) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _flightLookupError = error;
+      });
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _flightLookupError = TrackingException(error.toString());
+      });
+    } finally {
+      if (mounted) {
+        setState(() => _isLookingUpFlight = false);
+      }
+    }
+  }
+
+  Future<void> _pickFlightDate() async {
+    final today = DateUtils.dateOnly(DateTime.now());
+    final initialDate = _selectedFlightDate ?? today;
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: initialDate,
+      firstDate: DateTime(today.year - 1),
+      lastDate: DateTime(today.year + 1),
+    );
+
+    if (!mounted || picked == null) {
+      return;
+    }
+
+    setState(() {
+      _selectedFlightDate = DateUtils.dateOnly(picked);
+    });
+  }
+
+  void _clearFlightDate() {
+    setState(() {
+      _selectedFlightDate = null;
+    });
+  }
+
+  Future<void> _scrollToLookup() async {
+    final targetContext = _flightLookupKey.currentContext;
     if (targetContext == null) {
       return;
     }
@@ -94,6 +181,51 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Future<void> _scrollToRouteForm() async {
+    final targetContext = _routeFormKey.currentContext;
+    if (targetContext == null) {
+      return;
+    }
+
+    await Scrollable.ensureVisible(
+      targetContext,
+      duration: const Duration(milliseconds: 600),
+      curve: Curves.easeInOutCubic,
+      alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtStart,
+    );
+  }
+
+  Future<void> _useFlightRoute() async {
+    final flight = _flightLookup?.flight;
+    if (flight == null) {
+      return;
+    }
+
+    final departureCode = flight.departure.trim().toUpperCase();
+    final arrivalCode = flight.arrival.trim().toUpperCase();
+    final departure = AirportCatalog.lookup(departureCode);
+    final arrival = AirportCatalog.lookup(arrivalCode);
+
+    if (departure == null || arrival == null) {
+      _showMessage(
+        'SkyShake cannot prefill this route because $departureCode or $arrivalCode is outside the bundled airport catalog.',
+      );
+      return;
+    }
+
+    setState(() {
+      _departureController.text = departure.code;
+      _arrivalController.text = arrival.code;
+      if (flight.aircraft.trim().isNotEmpty &&
+          !flight.aircraft.toLowerCase().startsWith('unknown')) {
+        _aircraftController.text = flight.aircraft;
+      }
+    });
+
+    _showMessage('Route form updated from the live flight lookup.');
+    await _scrollToRouteForm();
+  }
+
   void _showMessage(String message) {
     if (!mounted) {
       return;
@@ -104,8 +236,40 @@ class _HomeScreenState extends State<HomeScreen> {
     ).showSnackBar(SnackBar(content: Text(message)));
   }
 
+  String _buildFlightLookupErrorMessage(TrackingException error) {
+    final baseMessage = error.message;
+    if (error.retryable && error.retryAfterSeconds != null) {
+      return '$baseMessage Try again in about ${error.retryAfterSeconds}s.';
+    }
+
+    return baseMessage;
+  }
+
+  String _buildRoutePrefillMessage(FlightData flight) {
+    final missingCodes = <String>[];
+    if (AirportCatalog.lookup(flight.departure.toUpperCase()) == null) {
+      missingCodes.add(flight.departure);
+    }
+    if (AirportCatalog.lookup(flight.arrival.toUpperCase()) == null) {
+      missingCodes.add(flight.arrival);
+    }
+
+    if (missingCodes.isEmpty) {
+      return 'This lookup can fill the route form.';
+    }
+
+    return 'Use this route is unavailable because ${missingCodes.join(' / ')} is outside the bundled airport catalog.';
+  }
+
   @override
   Widget build(BuildContext context) {
+    final flightLookup = _flightLookup;
+    final flightLookupFlight = flightLookup?.flight;
+    final canUseLookupRoute =
+        flightLookupFlight != null &&
+        AirportCatalog.lookup(flightLookupFlight.departure.toUpperCase()) !=
+            null &&
+        AirportCatalog.lookup(flightLookupFlight.arrival.toUpperCase()) != null;
     final analysis = _analysis;
     final flightData = analysis?.flightData;
     final report = analysis?.report;
@@ -142,15 +306,48 @@ class _HomeScreenState extends State<HomeScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            _TopBar(onPreview: _scrollToPreview),
+                            _TopBar(onPreview: _scrollToLookup),
                             const SizedBox(height: 20),
                             _HeroPanel(
                               compact: compactHero,
-                              onPreview: _scrollToPreview,
+                              onPreview: _scrollToLookup,
                             ),
                             const SizedBox(height: 24),
+                            FlightLookupPanel(
+                              key: _flightLookupKey,
+                              flightNumberController: _flightNumberController,
+                              selectedDate: _selectedFlightDate,
+                              isLoading: _isLookingUpFlight,
+                              onPickDate: _pickFlightDate,
+                              onClearDate: _clearFlightDate,
+                              onSearch: _handleFlightLookup,
+                            ),
+                            if (_flightLookupError != null) ...[
+                              const SizedBox(height: 16),
+                              _ErrorCard(
+                                message: _buildFlightLookupErrorMessage(
+                                  _flightLookupError!,
+                                ),
+                              ),
+                            ] else if (flightLookup != null) ...[
+                              const SizedBox(height: 16),
+                              FlightLookupResultCard(
+                                result: flightLookup,
+                                canUseRoute: canUseLookupRoute,
+                                onUseRoute:
+                                    canUseLookupRoute ? _useFlightRoute : null,
+                                routePrefillMessage:
+                                    canUseLookupRoute ||
+                                            flightLookupFlight == null
+                                        ? null
+                                        : _buildRoutePrefillMessage(
+                                          flightLookupFlight,
+                                        ),
+                              ),
+                            ],
+                            const SizedBox(height: 16),
                             SearchPanel(
-                              key: _previewKey,
+                              key: _routeFormKey,
                               departureController: _departureController,
                               arrivalController: _arrivalController,
                               aircraftController: _aircraftController,
@@ -167,7 +364,12 @@ class _HomeScreenState extends State<HomeScreen> {
                               const SizedBox(height: 16),
                               _RouteNoteCard(notice: analysis.notice),
                               const SizedBox(height: 16),
-                              FlightSummaryCard(flightData: flightData),
+                              FlightSummaryCard(
+                                flightData: flightData,
+                                headerLabel: 'Route estimate',
+                                supportingText:
+                                    'Server-side weather analysis for the selected airport pair.',
+                              ),
                               const SizedBox(height: 16),
                               TurbulenceSummaryCard(report: report),
                               const SizedBox(height: 16),
@@ -212,7 +414,7 @@ class _TopBar extends StatelessWidget {
         FilledButton.icon(
           onPressed: onPreview,
           icon: const Icon(Icons.flight_takeoff),
-          label: const Text('Try Live Preview'),
+          label: const Text('Open Live Tools'),
         ),
       ],
     );
@@ -247,9 +449,7 @@ class _HeroPanel extends StatelessWidget {
         ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 540),
           child: Text(
-            'SkyShake helps flyers preview where a route may get rough. '
-            'Run a route, get a score, and see the roughest segments without '
-            'digging through generic weather screens.',
+            'SkyShake helps flyers check a real flight number, turn it into a route, and estimate where that route may get rough. The app stays honest about what is live, what is cached, and what the provider could not supply.',
             style: theme.textTheme.bodyLarge?.copyWith(
               fontSize: compact ? 18 : 19,
               color: Colors.white.withValues(alpha: 0.8),
@@ -261,7 +461,7 @@ class _HeroPanel extends StatelessWidget {
           spacing: 10,
           runSpacing: 10,
           children: [
-            _HeroTag(label: 'Live weather'),
+            _HeroTag(label: 'Flight lookup'),
             _HeroTag(label: 'Route score'),
             _HeroTag(label: 'Segment warnings'),
           ],
@@ -270,11 +470,11 @@ class _HeroPanel extends StatelessWidget {
         FilledButton.icon(
           onPressed: onPreview,
           icon: const Icon(Icons.search),
-          label: const Text('Run A Route'),
+          label: const Text('Open Live Tools'),
         ),
         const SizedBox(height: 14),
         Text(
-          'Route preview is live now. Flight-number lookup is not.',
+          'Flight lookup and route analysis are live through the backend. Provider coverage and live position data are still conditional.',
           style: theme.textTheme.bodySmall?.copyWith(
             color: Colors.white.withValues(alpha: 0.7),
           ),
@@ -905,9 +1105,9 @@ class _BoundaryCard extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             const _BoundaryRow(
-              title: 'No live flight-number lookup',
+              title: 'Flight lookup is real, not perfect',
               body:
-                  'That path exists in the backend, but it should stay out of the hero until a real provider key is configured.',
+                  'Flight-number lookup now runs through AeroDataBox, but coverage is incomplete and some responses only include schedule metadata or partial timing.',
             ),
             const SizedBox(height: 12),
             const _BoundaryRow(

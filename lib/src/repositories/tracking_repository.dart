@@ -24,14 +24,32 @@ class RouteAnalysisResult {
   final String notice;
 }
 
+class FlightLookupQuery {
+  const FlightLookupQuery({required this.flightNumber, this.flightDate});
+
+  final String flightNumber;
+  final DateTime? flightDate;
+}
+
 abstract interface class TrackingRepository {
   Future<RouteAnalysisResult> analyzeRoute(RouteQuery query);
+  Future<FlightLookupResult> lookupFlight(FlightLookupQuery query);
 }
 
 class TrackingException implements Exception {
-  const TrackingException(this.message);
+  const TrackingException(
+    this.message, {
+    this.code,
+    this.provider,
+    this.retryable = false,
+    this.retryAfterSeconds,
+  });
 
   final String message;
+  final String? code;
+  final String? provider;
+  final bool retryable;
+  final int? retryAfterSeconds;
 
   @override
   String toString() => message;
