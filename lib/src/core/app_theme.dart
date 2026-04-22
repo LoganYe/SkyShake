@@ -78,6 +78,16 @@ class AppTheme {
       brightness: Brightness.dark,
       colorScheme: colorScheme,
       scaffoldBackgroundColor: Colors.transparent,
+      appBarTheme: AppBarTheme(
+        backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        centerTitle: false,
+        titleTextStyle: textTheme.titleLarge?.copyWith(
+          color: Colors.white,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
       textTheme: textTheme,
       cardTheme: const CardTheme(
         color: surface,
@@ -108,6 +118,28 @@ class AppTheme {
           borderRadius: BorderRadius.circular(22),
           borderSide: const BorderSide(color: sky, width: 1.4),
         ),
+      ),
+      navigationBarTheme: NavigationBarThemeData(
+        backgroundColor: surfaceAlt.withValues(alpha: 0.94),
+        indicatorColor: sky.withValues(alpha: 0.14),
+        elevation: 0,
+        surfaceTintColor: Colors.transparent,
+        height: 72,
+        iconTheme: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return const IconThemeData(color: sky);
+          }
+          return IconThemeData(color: Colors.white.withValues(alpha: 0.72));
+        }),
+        labelTextStyle: WidgetStateProperty.resolveWith((states) {
+          final base =
+              textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600) ??
+              const TextStyle();
+          if (states.contains(WidgetState.selected)) {
+            return base.copyWith(color: Colors.white);
+          }
+          return base.copyWith(color: Colors.white.withValues(alpha: 0.68));
+        }),
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
@@ -148,6 +180,7 @@ class AppTheme {
         behavior: SnackBarBehavior.floating,
         backgroundColor: surfaceAlt,
       ),
+      dividerColor: Colors.white.withValues(alpha: 0.08),
     );
   }
 
