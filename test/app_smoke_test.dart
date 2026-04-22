@@ -9,14 +9,16 @@ void main() {
     GoogleFonts.config.allowRuntimeFetching = false;
   });
 
-  testWidgets('renders the backend-driven home screen', (tester) async {
+  testWidgets('renders the landing page and live preview shell', (
+    tester,
+  ) async {
     await tester.pumpWidget(SkyShakeApp(repository: _StubTrackingRepository()));
     await tester.pumpAndSettle();
 
-    expect(find.text('SkyShake'), findsOneWidget);
-    expect(find.text('Analyze a route'), findsOneWidget);
-    expect(find.textContaining('requires a separate backend'), findsOneWidget);
-    expect(find.textContaining('Separate frontend/backend'), findsOneWidget);
+    expect(find.text('SkyShake'), findsWidgets);
+    expect(find.text('Check a route before the cabin does.'), findsOneWidget);
+    expect(find.text('Try the live preview'), findsOneWidget);
+    expect(find.text('Reality Check'), findsOneWidget);
   });
 
   testWidgets('shows route analysis results after a successful query', (
@@ -27,8 +29,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.ensureVisible(find.text('Check turbulence'));
-    await tester.tap(find.text('Check turbulence'));
+    await tester.ensureVisible(find.text('Run check'));
+    await tester.tap(find.text('Run check'));
     await tester.pump();
     await tester.pumpAndSettle();
 

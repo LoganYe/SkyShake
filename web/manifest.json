@@ -3,9 +3,9 @@
     "short_name": "SkyShake",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#07111F",
-    "theme_color": "#45C7FF",
-    "description": "SkyShake uses a Flutter frontend and a separate backend to analyze route turbulence with live weather data.",
+    "background_color": "#07111E",
+    "theme_color": "#0B1B30",
+    "description": "SkyShake is a mobile-first turbulence intelligence app that previews where a route may get rough with live weather context and honest route-level briefings.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

@@ -2,28 +2,76 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
-  static const Color background = Color(0xFF07111F);
-  static const Color surface = Color(0xFF0E1A2B);
-  static const Color surfaceAlt = Color(0xFF13243B);
-  static const Color line = Color(0xFF223C5C);
-  static const Color sky = Color(0xFF45C7FF);
-  static const Color smooth = Color(0xFF4DD4AC);
-  static const Color moderate = Color(0xFFF5B94A);
-  static const Color severe = Color(0xFFFF6C5C);
-  static const Color warning = Color(0xFFD29922);
+  static const Color background = Color(0xFF07111E);
+  static const Color surface = Color(0xFF0B1B30);
+  static const Color surfaceAlt = Color(0xFF132844);
+  static const Color surfaceSoft = Color(0xFF173355);
+  static const Color line = Color(0xFF2D5478);
+  static const Color sky = Color(0xFF77D8FF);
+  static const Color signal = Color(0xFFF6A347);
+  static const Color signalSoft = Color(0xFFF6C66B);
+  static const Color ink = Color(0xFF07111E);
+  static const Color smooth = Color(0xFF63D6AB);
+  static const Color moderate = Color(0xFFF7BA5D);
+  static const Color severe = Color(0xFFFF7B67);
+  static const Color warning = Color(0xFFF1C56E);
 
   static ThemeData darkTheme() {
     const colorScheme = ColorScheme.dark(
       primary: sky,
-      secondary: smooth,
+      secondary: signal,
       surface: surface,
       onSurface: Colors.white,
       error: severe,
     );
 
-    final textTheme = GoogleFonts.spaceGroteskTextTheme(
+    final baseTextTheme = GoogleFonts.spaceGroteskTextTheme(
       ThemeData.dark(useMaterial3: true).textTheme,
-    ).apply(bodyColor: Colors.white, displayColor: Colors.white);
+    );
+    final textTheme = baseTextTheme
+        .copyWith(
+          displayLarge: baseTextTheme.displayLarge?.copyWith(
+            fontWeight: FontWeight.w700,
+            letterSpacing: -2.8,
+            height: 0.95,
+          ),
+          displayMedium: baseTextTheme.displayMedium?.copyWith(
+            fontWeight: FontWeight.w700,
+            letterSpacing: -1.6,
+            height: 0.98,
+          ),
+          headlineLarge: baseTextTheme.headlineLarge?.copyWith(
+            fontWeight: FontWeight.w700,
+            letterSpacing: -1.4,
+          ),
+          headlineMedium: baseTextTheme.headlineMedium?.copyWith(
+            fontWeight: FontWeight.w700,
+            letterSpacing: -1.2,
+          ),
+          headlineSmall: baseTextTheme.headlineSmall?.copyWith(
+            fontWeight: FontWeight.w700,
+            letterSpacing: -0.8,
+          ),
+          titleLarge: baseTextTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.w700,
+          ),
+          titleMedium: baseTextTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+          ),
+          bodyLarge: baseTextTheme.bodyLarge?.copyWith(
+            height: 1.5,
+            letterSpacing: -0.1,
+          ),
+          bodyMedium: baseTextTheme.bodyMedium?.copyWith(
+            height: 1.55,
+            color: Colors.white.withValues(alpha: 0.78),
+          ),
+          bodySmall: baseTextTheme.bodySmall?.copyWith(
+            height: 1.45,
+            color: Colors.white.withValues(alpha: 0.6),
+          ),
+        )
+        .apply(bodyColor: Colors.white, displayColor: Colors.white);
 
     return ThemeData(
       useMaterial3: true,
@@ -35,28 +83,65 @@ class AppTheme {
         color: surface,
         elevation: 0,
         margin: EdgeInsets.zero,
+        surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.all(Radius.circular(24)),
+          borderRadius: BorderRadius.all(Radius.circular(28)),
           side: BorderSide(color: line),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: surfaceAlt,
+        labelStyle: textTheme.bodySmall,
         hintStyle: textTheme.bodyMedium?.copyWith(
           color: Colors.white.withValues(alpha: 0.55),
         ),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(22),
           borderSide: const BorderSide(color: line),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(22),
           borderSide: const BorderSide(color: line),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(22),
           borderSide: const BorderSide(color: sky, width: 1.4),
+        ),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          backgroundColor: signal,
+          foregroundColor: ink,
+          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 18),
+          textStyle: textTheme.titleMedium?.copyWith(
+            color: ink,
+            fontWeight: FontWeight.w700,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(999),
+          ),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: Colors.white,
+          side: BorderSide(color: Colors.white.withValues(alpha: 0.14)),
+          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 18),
+          textStyle: textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(999),
+          ),
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          foregroundColor: Colors.white.withValues(alpha: 0.86),
+          textStyle: textTheme.titleSmall?.copyWith(
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ),
       snackBarTheme: const SnackBarThemeData(
@@ -67,8 +152,13 @@ class AppTheme {
   }
 
   static const LinearGradient backgroundGradient = LinearGradient(
-    begin: Alignment.topCenter,
-    end: Alignment.bottomCenter,
-    colors: [Color(0xFF061121), Color(0xFF09182C), Color(0xFF07111F)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      Color(0xFF07111E),
+      Color(0xFF0A1D33),
+      Color(0xFF14385C),
+      Color(0xFF07111E),
+    ],
   );
 }
