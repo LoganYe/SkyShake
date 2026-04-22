@@ -16,6 +16,28 @@ const noFlightProviderConfig = {
 };
 
 describe('route analysis endpoint', () => {
+  test('answers browser CORS preflight requests for route analysis', async () => {
+    const app = buildApp(noFlightProviderConfig);
+
+    const response = await app.inject({
+      method: 'OPTIONS',
+      url: '/v1/route-analysis',
+      headers: {
+        origin: 'http://127.0.0.1:8080',
+        'access-control-request-method': 'POST',
+        'access-control-request-headers': 'content-type',
+      },
+    });
+
+    expect(response.statusCode).toBe(204);
+    expect(response.headers['access-control-allow-origin']).toBe(
+      'http://127.0.0.1:8080',
+    );
+    expect(response.headers['access-control-allow-methods']).toContain('POST');
+
+    await app.close();
+  });
+
   test('returns validated analysis payloads', async () => {
     const weatherProvider: WeatherProvider = {
       async fetchSnapshot() {
@@ -78,6 +100,7 @@ describe('route analysis endpoint', () => {
     expect(response.statusCode).toBe(400);
     expect(response.json()).toEqual({
       error: 'Invalid input: expected object, received undefined',
+      code: 'invalid_request',
     });
 
     await app.close();

@@ -1,3 +1,4 @@
+import cors from '@fastify/cors';
 import Fastify from 'fastify';
 import { ZodError } from 'zod';
 
@@ -13,10 +14,12 @@ import {
 } from './contracts.js';
 import { ApiError } from './errors.js';
 import { analyzeRouteWithWeather, type WeatherProvider } from './services/turbulence.js';
+import { FlightLookupService } from './services/flight-lookup.js';
 
 interface BuildAppDependencies {
   weatherProvider?: WeatherProvider;
   flightLookupProvider?: FlightLookupProvider;
+  flightLookupService?: FlightLookupService;
 }
 
 export function buildApp(
@@ -24,28 +27,54 @@ export function buildApp(
   dependencies: BuildAppDependencies = {},
 ) {
   const app = Fastify({ logger: false });
+  void app.register(cors, {
+    origin: true,
+    methods: ['GET', 'POST', 'OPTIONS'],
+    allowedHeaders: ['Accept', 'Content-Type'],
+    maxAge: 600,
+  });
   const openMeteoClient =
     dependencies.weatherProvider ?? new OpenMeteoClient();
   const flightLookupProvider =
     dependencies.flightLookupProvider ?? createFlightLookupProvider(config);
+  const flightLookupService =
+    dependencies.flightLookupService ??
+    new FlightLookupService(config.flightProvider, flightLookupProvider);
 
   app.setErrorHandler((error, _request, reply) => {
     if (error instanceof ApiError) {
-      return reply.status(error.statusCode).send({ error: error.message });
+      if (error.retryAfterSeconds != null) {
+        reply.header('Retry-After', String(error.retryAfterSeconds));
+      }
+
+      return reply.status(error.statusCode).send({
+        error: error.message,
+        code: error.code,
+        provider: error.provider ?? undefined,
+        retryable: error.retryable || undefined,
+        retryAfterSeconds: error.retryAfterSeconds ?? undefined,
+      });
     }
 
     if (error instanceof ZodError) {
       const firstIssue = error.issues[0];
       return reply.status(400).send({
         error: firstIssue?.message ?? 'Request validation failed.',
+        code: 'invalid_request',
       });
     }
 
     if (hasValidation(error)) {
-      return reply.status(400).send({ error: error.message });
+      return reply.status(400).send({
+        error: error.message,
+        code: 'invalid_request',
+      });
     }
 
-    return reply.status(500).send({ error: 'Unexpected server error.' });
+    return reply.status(500).send({
+      error: 'Unexpected server error.',
+      code: 'internal_error',
+    });
   });
 
   app.get('/healthz', async () => {
@@ -75,22 +104,10 @@ export function buildApp(
 
   app.get('/v1/flights/search', async (request) => {
     const query = flightLookupQuerySchema.parse(request.query);
-    const result = await flightLookupProvider.lookupFlight(
+    return flightLookupService.lookupFlight(
       query.flightNumber,
       query.flightDate,
     );
-
-    if (!result) {
-      return {
-        flightNumber: query.flightNumber.toUpperCase(),
-        notFound: true,
-      };
-    }
-
-    return {
-      flight: result,
-      notFound: false,
-    };
   });
 
   return app;

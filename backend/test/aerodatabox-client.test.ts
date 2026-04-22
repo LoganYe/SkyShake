@@ -1,7 +1,11 @@
 import { describe, expect, test } from 'vitest';
 
 import { AeroDataBoxClient } from '../src/clients/aerodatabox-client.js';
-import { ConfigurationError, UpstreamServiceError } from '../src/errors.js';
+import {
+  ConfigurationError,
+  RateLimitError,
+  UpstreamServiceError,
+} from '../src/errors.js';
 
 describe('AeroDataBoxClient', () => {
   test('normalizes a successful RapidAPI flight lookup and ranks candidates deterministically', async () => {
@@ -221,13 +225,18 @@ describe('AeroDataBoxClient', () => {
       async () =>
         new Response(JSON.stringify({ message: 'Too many requests.' }), {
           status: 429,
-          headers: { 'content-type': 'application/json' },
+          headers: {
+            'content-type': 'application/json',
+            'retry-after': '9',
+          },
         }),
     );
 
-    await expect(client.lookupFlight('UA857')).rejects.toThrow(
-      /rate limit exceeded/i,
-    );
+    await expect(client.lookupFlight('UA857')).rejects.toMatchObject({
+      name: RateLimitError.name,
+      retryable: true,
+      retryAfterSeconds: 9,
+    });
   });
 
   test('rejects malformed success payloads', async () => {

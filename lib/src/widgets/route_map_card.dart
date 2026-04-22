@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -7,6 +5,7 @@ import 'package:latlong2/latlong.dart';
 import '../core/airport_catalog.dart';
 import '../core/brand.dart';
 import '../core/app_theme.dart';
+import '../core/route_map_geometry.dart';
 import '../models/flight_models.dart';
 
 class RouteMapCard extends StatelessWidget {
@@ -37,42 +36,65 @@ class RouteMapCard extends StatelessWidget {
       );
     }
 
-    final center = LatLng(
-      (departure.latitude + arrival.latitude) / 2,
-      (departure.longitude + arrival.longitude) / 2,
+    final routePoints =
+        report.waypoints.isNotEmpty
+            ? report.waypoints
+                .map(
+                  (waypoint) => LatLng(waypoint.latitude, waypoint.longitude),
+                )
+                .toList(growable: false)
+            : <LatLng>[
+              LatLng(departure.latitude, departure.longitude),
+              LatLng(arrival.latitude, arrival.longitude),
+            ];
+    final mapLayout = buildRouteMapLayout(routePoints);
+    final departurePoint = alignPointToReferenceWorld(
+      LatLng(departure.latitude, departure.longitude),
+      mapLayout.referenceLongitude,
     );
-    final zoom = _estimateZoom(departure, arrival);
-    final routePoints = report.waypoints
-        .map((waypoint) => LatLng(waypoint.latitude, waypoint.longitude))
+    final arrivalPoint = alignPointToReferenceWorld(
+      LatLng(arrival.latitude, arrival.longitude),
+      mapLayout.referenceLongitude,
+    );
+    final waypointPoints = report.waypoints
+        .map(
+          (waypoint) => alignPointToReferenceWorld(
+            LatLng(waypoint.latitude, waypoint.longitude),
+            mapLayout.referenceLongitude,
+          ),
+        )
         .toList(growable: false);
 
     final markers = <Marker>[
       Marker(
-        point: LatLng(departure.latitude, departure.longitude),
+        point: departurePoint,
         width: 84,
         height: 34,
         child: _AirportMarker(code: departure.code, color: AppTheme.sky),
       ),
       Marker(
-        point: LatLng(arrival.latitude, arrival.longitude),
+        point: arrivalPoint,
         width: 84,
         height: 34,
         child: _AirportMarker(code: arrival.code, color: Colors.white),
       ),
-      if (flightData.latitude != null && flightData.longitude != null)
+      if (_shouldShowLivePositionMarker())
         Marker(
-          point: LatLng(flightData.latitude!, flightData.longitude!),
+          point: alignPointToReferenceWorld(
+            LatLng(flightData.latitude!, flightData.longitude!),
+            mapLayout.referenceLongitude,
+          ),
           width: 40,
           height: 40,
           child: const Icon(Icons.airplanemode_active, color: AppTheme.sky),
         ),
-      ...report.waypoints.map(
-        (waypoint) => Marker(
-          point: LatLng(waypoint.latitude, waypoint.longitude),
+      ...waypointPoints.asMap().entries.map(
+        (entry) => Marker(
+          point: entry.value,
           width: 18,
           height: 18,
           child: _TurbulencePoint(
-            color: switch (waypoint.label) {
+            color: switch (report.waypoints[entry.key].label) {
               TurbulenceLabel.smooth => AppTheme.smooth,
               TurbulenceLabel.moderate => AppTheme.moderate,
               TurbulenceLabel.severe => AppTheme.severe,
@@ -107,8 +129,17 @@ class RouteMapCard extends StatelessWidget {
                 height: 340,
                 child: FlutterMap(
                   options: MapOptions(
-                    initialCenter: center,
-                    initialZoom: zoom,
+                    initialCenter: mapLayout.center,
+                    initialZoom: mapLayout.zoom,
+                    initialCameraFit:
+                        mapLayout.routePolyline.length >= 2
+                            ? CameraFit.coordinates(
+                              coordinates: mapLayout.routePolyline,
+                              padding: const EdgeInsets.all(32),
+                              maxZoom: 5.4,
+                              minZoom: 1.4,
+                            )
+                            : null,
                     interactionOptions: const InteractionOptions(
                       flags:
                           InteractiveFlag.drag |
@@ -126,13 +157,16 @@ class RouteMapCard extends StatelessWidget {
                     else
                       const ColoredBox(color: AppTheme.surfaceAlt),
                     PolylineLayer(
-                      polylines: [
-                        Polyline(
-                          points: routePoints,
-                          strokeWidth: 4,
-                          color: AppTheme.sky.withValues(alpha: 0.8),
-                        ),
-                      ],
+                      polylines:
+                          mapLayout.routePolyline.length >= 2
+                              ? <Polyline>[
+                                Polyline(
+                                  points: mapLayout.routePolyline,
+                                  strokeWidth: 4,
+                                  color: AppTheme.sky.withValues(alpha: 0.8),
+                                ),
+                              ]
+                              : const <Polyline>[],
                     ),
                     MarkerLayer(markers: markers),
                   ],
@@ -145,21 +179,13 @@ class RouteMapCard extends StatelessWidget {
     );
   }
 
-  double _estimateZoom(AirportRecord departure, AirportRecord arrival) {
-    final latDistance = (departure.latitude - arrival.latitude).abs();
-    final lonDistance = (departure.longitude - arrival.longitude).abs();
-    final roughDistance = math.max(latDistance, lonDistance);
+  bool _shouldShowLivePositionMarker() {
+    if (flightData.latitude == null || flightData.longitude == null) {
+      return false;
+    }
 
-    if (roughDistance > 90) {
-      return 1.8;
-    }
-    if (roughDistance > 45) {
-      return 2.8;
-    }
-    if (roughDistance > 20) {
-      return 4.0;
-    }
-    return 5.2;
+    final normalizedStatus = flightData.status.toLowerCase();
+    return !normalizedStatus.contains('estimate');
   }
 
   bool _shouldRenderBaseTiles() {
