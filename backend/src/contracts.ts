@@ -46,9 +46,28 @@ export interface FlightLookupMetadataPayload {
 export interface FlightLookupResponsePayload {
   flightNumber: string;
   flightDate: string | null;
+  flightTime: string | null;
   flight: FlightDataPayload | null;
   notFound: boolean;
   meta: FlightLookupMetadataPayload;
+}
+
+export interface FlightOptionsMetadataPayload {
+  provider: string;
+  source: 'live' | 'cache';
+  cachedAt: string | null;
+  expiresAt: string | null;
+  timeWindowStart: string;
+  timeWindowEnd: string;
+}
+
+export interface FlightOptionsResponsePayload {
+  departureCode: string;
+  arrivalCode: string;
+  departureLocal: string;
+  flights: FlightDataPayload[];
+  notFound: boolean;
+  meta: FlightOptionsMetadataPayload;
 }
 
 export interface ErrorResponsePayload {
@@ -95,6 +114,22 @@ export const flightLookupQuerySchema = z.object({
     .trim()
     .regex(/^\d{4}-\d{2}-\d{2}$/)
     .optional(),
+  flightTime: z
+    .string()
+    .trim()
+    .regex(/^\d{2}:\d{2}$/)
+    .optional(),
 });
 
 export type FlightLookupQuery = z.infer<typeof flightLookupQuerySchema>;
+
+export const flightOptionsQuerySchema = z.object({
+  departureCode: z.string().trim().min(3).max(4),
+  arrivalCode: z.string().trim().min(3).max(4),
+  departureLocal: z
+    .string()
+    .trim()
+    .regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/),
+});
+
+export type FlightOptionsQuery = z.infer<typeof flightOptionsQuerySchema>;

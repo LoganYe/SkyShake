@@ -109,6 +109,7 @@ void main() {
               (_) async => const FlightLookupResult(
                 flightNumber: 'ZZ0000',
                 flightDate: null,
+                flightTime: null,
                 flight: null,
                 notFound: true,
                 metadata: FlightLookupMetadata(
@@ -223,6 +224,13 @@ class _FakeTrackingRepository implements TrackingRepository {
 
     return handler(query);
   }
+
+  @override
+  Future<FlightOptionsResult> searchFlightsForRoute(FlightOptionsQuery query) {
+    throw UnimplementedError(
+      'searchFlightsForRoute was not configured for this test.',
+    );
+  }
 }
 
 RouteAnalysisResult _sampleRouteAnalysis() {
@@ -303,6 +311,7 @@ FlightLookupResult _sampleFlightLookup() {
   return FlightLookupResult(
     flightNumber: 'AS331',
     flightDate: DateTime.utc(2026, 4, 21),
+    flightTime: null,
     notFound: false,
     flight: FlightData(
       flightNumber: 'AS331',

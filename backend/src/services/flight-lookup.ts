@@ -1,4 +1,4 @@
-import type { FlightLookupProvider } from '../clients/flight-lookup-provider.js';
+import type { FlightDataProvider } from '../clients/flight-lookup-provider.js';
 import type {
   FlightDataPayload,
   FlightLookupMetadataPayload,
@@ -11,6 +11,7 @@ const DEFAULT_NOT_FOUND_TTL_MS = 30_000;
 interface CacheEntry {
   flightNumber: string;
   flightDate: string | null;
+  flightTime: string | null;
   flight: FlightDataPayload | null;
   notFound: boolean;
   partial: boolean;
@@ -28,7 +29,7 @@ interface FlightLookupServiceOptions {
 export class FlightLookupService {
   constructor(
     private readonly providerName: string,
-    private readonly provider: FlightLookupProvider,
+    private readonly provider: FlightDataProvider,
     options: FlightLookupServiceOptions = {},
   ) {
     this._now = options.now ?? Date.now;
@@ -45,10 +46,16 @@ export class FlightLookupService {
   async lookupFlight(
     flightNumber: string,
     flightDate?: string,
+    flightTime?: string,
   ): Promise<FlightLookupResponsePayload> {
     const normalizedFlightNumber = normalizeLookupValue(flightNumber);
     const normalizedFlightDate = normalizeFlightDate(flightDate);
-    const cacheKey = buildCacheKey(normalizedFlightNumber, normalizedFlightDate);
+    const normalizedFlightTime = normalizeFlightTime(flightTime);
+    const cacheKey = buildCacheKey(
+      normalizedFlightNumber,
+      normalizedFlightDate,
+      normalizedFlightTime,
+    );
     const cachedEntry = this.readCache(cacheKey);
 
     if (cachedEntry) {
@@ -64,6 +71,7 @@ export class FlightLookupService {
       cacheKey,
       normalizedFlightNumber,
       normalizedFlightDate,
+      normalizedFlightTime,
     );
     this.inFlight.set(cacheKey, request);
 
@@ -78,10 +86,12 @@ export class FlightLookupService {
     cacheKey: string,
     flightNumber: string,
     flightDate: string | null,
+    flightTime: string | null,
   ) {
     const flight = await this.provider.lookupFlight(
       flightNumber,
       flightDate ?? undefined,
+      flightTime ?? undefined,
     );
     const missingFields = flight ? detectMissingFields(flight) : [];
     const now = this._now();
@@ -89,6 +99,7 @@ export class FlightLookupService {
     const entry: CacheEntry = {
       flightNumber,
       flightDate,
+      flightTime,
       flight,
       notFound: flight == null,
       partial: missingFields.length > 0,
@@ -117,8 +128,12 @@ export class FlightLookupService {
   }
 }
 
-function buildCacheKey(flightNumber: string, flightDate: string | null) {
-  return `${flightNumber}::${flightDate ?? 'none'}`;
+function buildCacheKey(
+  flightNumber: string,
+  flightDate: string | null,
+  flightTime: string | null,
+) {
+  return `${flightNumber}::${flightDate ?? 'none'}::${flightTime ?? 'any'}`;
 }
 
 function normalizeLookupValue(value: string) {
@@ -126,6 +141,11 @@ function normalizeLookupValue(value: string) {
 }
 
 function normalizeFlightDate(value: string | undefined) {
+  const trimmed = value?.trim();
+  return trimmed && trimmed.length > 0 ? trimmed : null;
+}
+
+function normalizeFlightTime(value: string | undefined) {
   const trimmed = value?.trim();
   return trimmed && trimmed.length > 0 ? trimmed : null;
 }
@@ -191,6 +211,7 @@ function buildResponse(
   return {
     flightNumber: entry.flightNumber,
     flightDate: entry.flightDate,
+    flightTime: entry.flightTime,
     flight: entry.flight ? { ...entry.flight } : null,
     notFound: entry.notFound,
     meta: {
@@ -210,6 +231,7 @@ function cloneResponse(
   return {
     flightNumber: response.flightNumber,
     flightDate: response.flightDate,
+    flightTime: response.flightTime,
     flight: response.flight ? { ...response.flight } : null,
     notFound: response.notFound,
     meta: {

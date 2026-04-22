@@ -68,6 +68,11 @@ class _FakeTrackingRepository implements TrackingRepository {
   Future<FlightLookupResult> lookupFlight(FlightLookupQuery query) {
     throw UnimplementedError('lookupFlight was not configured.');
   }
+
+  @override
+  Future<FlightOptionsResult> searchFlightsForRoute(FlightOptionsQuery query) {
+    throw UnimplementedError('searchFlightsForRoute was not configured.');
+  }
 }
 
 RouteAnalysisResult _sampleRouteAnalysis() {

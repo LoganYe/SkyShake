@@ -1,14 +1,50 @@
-import { UpstreamServiceError } from '../errors.js';
+import { RateLimitError, UpstreamServiceError } from '../errors.js';
 import type { WeatherProvider, WeatherSnapshot } from '../services/turbulence.js';
 
 interface FetchLike {
   (input: URL | RequestInfo, init?: RequestInit): Promise<Response>;
 }
 
+interface CacheEntry {
+  snapshot: WeatherSnapshot;
+  expiresAtMs: number;
+}
+
+const DEFAULT_CACHE_TTL_MS = 5 * 60 * 1000;
+
 export class OpenMeteoClient implements WeatherProvider {
   constructor(private readonly fetchImpl: FetchLike = fetch) {}
 
+  private readonly cache = new Map<string, CacheEntry>();
+  private readonly inFlight = new Map<string, Promise<WeatherSnapshot>>();
+
   async fetchSnapshot(latitude: number, longitude: number): Promise<WeatherSnapshot> {
+    const cacheKey = buildCacheKey(latitude, longitude);
+    const cached = this.cache.get(cacheKey);
+    if (cached && cached.expiresAtMs > Date.now()) {
+      return { ...cached.snapshot };
+    }
+
+    const inFlight = this.inFlight.get(cacheKey);
+    if (inFlight) {
+      return { ...(await inFlight) };
+    }
+
+    const request = this.fetchFreshSnapshot(latitude, longitude, cacheKey);
+    this.inFlight.set(cacheKey, request);
+
+    try {
+      return { ...(await request) };
+    } finally {
+      this.inFlight.delete(cacheKey);
+    }
+  }
+
+  private async fetchFreshSnapshot(
+    latitude: number,
+    longitude: number,
+    cacheKey: string,
+  ): Promise<WeatherSnapshot> {
     const url = new URL('https://api.open-meteo.com/v1/forecast');
     url.searchParams.set('latitude', latitude.toFixed(4));
     url.searchParams.set('longitude', longitude.toFixed(4));
@@ -24,9 +60,25 @@ export class OpenMeteoClient implements WeatherProvider {
       headers: { Accept: 'application/json' },
     });
 
+    if (response.status === 429) {
+      throw new RateLimitError(
+        'Live weather data is temporarily rate limited.',
+        {
+          provider: 'open-meteo',
+          retryAfterSeconds: parseRetryAfterSeconds(
+            response.headers.get('retry-after'),
+          ),
+        },
+      );
+    }
+
     if (!response.ok) {
       throw new UpstreamServiceError(
-        `Open-Meteo request failed with HTTP ${response.status}.`,
+        `Live weather data request failed with HTTP ${response.status}.`,
+        {
+          code: 'provider_request_failed',
+          provider: 'open-meteo',
+        },
       );
     }
 
@@ -50,11 +102,15 @@ export class OpenMeteoClient implements WeatherProvider {
       upperWind120 == null
     ) {
       throw new UpstreamServiceError(
-        'Open-Meteo response was missing one or more required fields.',
+        'Live weather data returned incomplete fields.',
+        {
+          code: 'provider_payload_invalid',
+          provider: 'open-meteo',
+        },
       );
     }
 
-    return {
+    const snapshot = {
       windSpeed,
       windGusts,
       windShear: Math.abs(upperWind120 - upperWind80),
@@ -63,7 +119,18 @@ export class OpenMeteoClient implements WeatherProvider {
       upperWind80,
       upperWind120,
     };
+
+    this.cache.set(cacheKey, {
+      snapshot,
+      expiresAtMs: Date.now() + DEFAULT_CACHE_TTL_MS,
+    });
+
+    return snapshot;
   }
+}
+
+function buildCacheKey(latitude: number, longitude: number) {
+  return `${latitude.toFixed(4)},${longitude.toFixed(4)}`;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -92,4 +159,27 @@ function firstNumeric(value: unknown) {
     return null;
   }
   return toNumber(value);
+}
+
+function parseRetryAfterSeconds(value: string | null) {
+  if (!value) {
+    return null;
+  }
+
+  const parsedSeconds = Number(value);
+  if (Number.isFinite(parsedSeconds) && parsedSeconds >= 0) {
+    return Math.ceil(parsedSeconds);
+  }
+
+  const parsedDate = new Date(value);
+  if (Number.isNaN(parsedDate.getTime())) {
+    return null;
+  }
+
+  const deltaMs = parsedDate.getTime() - Date.now();
+  if (deltaMs <= 0) {
+    return null;
+  }
+
+  return Math.ceil(deltaMs / 1000);
 }

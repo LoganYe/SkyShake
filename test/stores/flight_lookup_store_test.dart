@@ -14,6 +14,7 @@ void main() {
               (_) async => FlightLookupResult(
                 flightNumber: 'UA857',
                 flightDate: DateTime.utc(2026, 4, 21),
+                flightTime: null,
                 flight: FlightData(
                   flightNumber: 'UA857',
                   airline: 'United Airlines',
@@ -98,5 +99,10 @@ class _FakeTrackingRepository implements TrackingRepository {
       throw UnimplementedError('lookupFlight was not configured.');
     }
     return handler(query);
+  }
+
+  @override
+  Future<FlightOptionsResult> searchFlightsForRoute(FlightOptionsQuery query) {
+    throw UnimplementedError('searchFlightsForRoute was not configured.');
   }
 }

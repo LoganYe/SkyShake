@@ -32,8 +32,10 @@ export async function analyzeRouteWithWeather(
       estimateDurationMinutes(distance, request.aircraftType) * 60 * 1000,
   );
 
-  const weatherSamples = await Promise.all(
-    points.map((point) => weatherProvider.fetchSnapshot(point.latitude, point.longitude)),
+  const weatherSamples = await mapWithConcurrency(
+    points,
+    3,
+    (point) => weatherProvider.fetchSnapshot(point.latitude, point.longitude),
   );
 
   const waypoints: TurbulenceWaypointPayload[] = points.map((point, index) => {
@@ -224,4 +226,26 @@ function normalize(value: number, min: number, max: number) {
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
+}
+
+async function mapWithConcurrency<TInput, TOutput>(
+  items: readonly TInput[],
+  concurrency: number,
+  mapper: (item: TInput, index: number) => Promise<TOutput>,
+) {
+  const limit = Math.max(1, Math.min(concurrency, items.length));
+  const results = new Array<TOutput>(items.length);
+  let nextIndex = 0;
+
+  await Promise.all(
+    Array.from({ length: limit }, async () => {
+      while (nextIndex < items.length) {
+        const currentIndex = nextIndex;
+        nextIndex += 1;
+        results[currentIndex] = await mapper(items[currentIndex], currentIndex);
+      }
+    }),
+  );
+
+  return results;
 }

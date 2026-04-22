@@ -3,23 +3,26 @@ import Fastify from 'fastify';
 import { ZodError } from 'zod';
 
 import {
-  createFlightLookupProvider,
-  type FlightLookupProvider,
+  createFlightDataProvider,
+  type FlightDataProvider,
 } from './clients/flight-lookup-provider.js';
 import { OpenMeteoClient } from './clients/open-meteo-client.js';
 import { readConfig, type BackendConfig } from './config.js';
 import {
+  flightOptionsQuerySchema,
   flightLookupQuerySchema,
   routeAnalysisRequestSchema,
 } from './contracts.js';
 import { ApiError } from './errors.js';
+import { FlightOptionsService } from './services/flight-options.js';
 import { analyzeRouteWithWeather, type WeatherProvider } from './services/turbulence.js';
 import { FlightLookupService } from './services/flight-lookup.js';
 
 interface BuildAppDependencies {
   weatherProvider?: WeatherProvider;
-  flightLookupProvider?: FlightLookupProvider;
+  flightDataProvider?: FlightDataProvider;
   flightLookupService?: FlightLookupService;
+  flightOptionsService?: FlightOptionsService;
 }
 
 export function buildApp(
@@ -35,11 +38,14 @@ export function buildApp(
   });
   const openMeteoClient =
     dependencies.weatherProvider ?? new OpenMeteoClient();
-  const flightLookupProvider =
-    dependencies.flightLookupProvider ?? createFlightLookupProvider(config);
+  const flightDataProvider =
+    dependencies.flightDataProvider ?? createFlightDataProvider(config);
   const flightLookupService =
     dependencies.flightLookupService ??
-    new FlightLookupService(config.flightProvider, flightLookupProvider);
+    new FlightLookupService(config.flightProvider, flightDataProvider);
+  const flightOptionsService =
+    dependencies.flightOptionsService ??
+    new FlightOptionsService(config.flightProvider, flightDataProvider);
 
   app.setErrorHandler((error, _request, reply) => {
     if (error instanceof ApiError) {
@@ -107,6 +113,16 @@ export function buildApp(
     return flightLookupService.lookupFlight(
       query.flightNumber,
       query.flightDate,
+      query.flightTime,
+    );
+  });
+
+  app.get('/v1/flights/options', async (request) => {
+    const query = flightOptionsQuerySchema.parse(request.query);
+    return flightOptionsService.searchFlights(
+      query.departureCode,
+      query.arrivalCode,
+      query.departureLocal,
     );
   });
 

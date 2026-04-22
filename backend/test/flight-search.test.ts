@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest';
 
 import { buildApp } from '../src/app.js';
-import type { FlightLookupProvider } from '../src/clients/flight-lookup-provider.js';
+import type { FlightDataProvider } from '../src/clients/flight-lookup-provider.js';
 import { RateLimitError } from '../src/errors.js';
 
 describe('flight search endpoint', () => {
@@ -45,13 +45,16 @@ describe('flight search endpoint', () => {
   });
 
   test('returns an honest notFound payload when the provider has no result', async () => {
-    const flightLookupProvider: FlightLookupProvider = {
+    const flightDataProvider: FlightDataProvider = {
       async lookupFlight() {
         return null;
       },
+      async searchFlightsByRoute() {
+        return [];
+      },
     };
 
-    const app = buildApp(disabledFlightConfig(), { flightLookupProvider });
+    const app = buildApp(disabledFlightConfig(), { flightDataProvider });
 
     const response = await app.inject({
       method: 'GET',
@@ -63,6 +66,7 @@ describe('flight search endpoint', () => {
       flight: null,
       flightNumber: 'UA857',
       flightDate: null,
+      flightTime: null,
       meta: {
         provider: 'none',
         source: 'live',
@@ -78,12 +82,15 @@ describe('flight search endpoint', () => {
   });
 
   test('adds CORS headers to browser flight lookup responses', async () => {
-    const flightLookupProvider: FlightLookupProvider = {
+    const flightDataProvider: FlightDataProvider = {
       async lookupFlight() {
         return null;
       },
+      async searchFlightsByRoute() {
+        return [];
+      },
     };
-    const app = buildApp(disabledFlightConfig(), { flightLookupProvider });
+    const app = buildApp(disabledFlightConfig(), { flightDataProvider });
 
     const response = await app.inject({
       method: 'GET',
@@ -103,7 +110,7 @@ describe('flight search endpoint', () => {
 
   test('returns cache metadata and avoids duplicate upstream calls for repeated searches', async () => {
     let calls = 0;
-    const flightLookupProvider: FlightLookupProvider = {
+    const flightDataProvider: FlightDataProvider = {
       async lookupFlight() {
         calls += 1;
         return {
@@ -125,8 +132,11 @@ describe('flight search endpoint', () => {
           error: null,
         };
       },
+      async searchFlightsByRoute() {
+        return [];
+      },
     };
-    const app = buildApp(disabledFlightConfig(), { flightLookupProvider });
+    const app = buildApp(disabledFlightConfig(), { flightDataProvider });
 
     const first = await app.inject({
       method: 'GET',
@@ -148,15 +158,18 @@ describe('flight search endpoint', () => {
   });
 
   test('surfaces rate-limit errors as retryable 503 responses', async () => {
-    const flightLookupProvider: FlightLookupProvider = {
+    const flightDataProvider: FlightDataProvider = {
       async lookupFlight() {
         throw new RateLimitError('AeroDataBox rate limit exceeded.', {
           provider: 'aerodatabox',
           retryAfterSeconds: 7,
         });
       },
+      async searchFlightsByRoute() {
+        return [];
+      },
     };
-    const app = buildApp(disabledFlightConfig(), { flightLookupProvider });
+    const app = buildApp(disabledFlightConfig(), { flightDataProvider });
 
     const response = await app.inject({
       method: 'GET',
@@ -172,6 +185,45 @@ describe('flight search endpoint', () => {
       retryable: true,
       retryAfterSeconds: 7,
     });
+
+    await app.close();
+  });
+
+  test('accepts an optional flight time and preserves it in the response', async () => {
+    const flightDataProvider: FlightDataProvider = {
+      async lookupFlight() {
+        return {
+          flightNumber: 'UA857',
+          airline: 'United Airlines',
+          departure: 'SFO',
+          departureAirport: 'San Francisco',
+          arrival: 'JFK',
+          arrivalAirport: 'John F. Kennedy International',
+          departureTime: '2026-04-22T19:05:00.000Z',
+          arrivalTime: '2026-04-23T01:10:00.000Z',
+          aircraft: 'Boeing 777-300ER',
+          status: 'Scheduled',
+          latitude: null,
+          longitude: null,
+          altitude: null,
+          velocity: null,
+          isMockData: false,
+          error: null,
+        };
+      },
+      async searchFlightsByRoute() {
+        return [];
+      },
+    };
+    const app = buildApp(disabledFlightConfig(), { flightDataProvider });
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/v1/flights/search?flightNumber=UA857&flightDate=2026-04-22&flightTime=12:05',
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json().flightTime).toBe('12:05');
 
     await app.close();
   });
