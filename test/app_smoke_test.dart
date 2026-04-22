@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:skyshake/src/app.dart';
+import 'package:skyshake/src/core/app_config.dart';
 import 'package:skyshake/src/models/flight_models.dart';
 import 'package:skyshake/src/repositories/tracking_repository.dart';
 
@@ -10,22 +11,30 @@ void main() {
     GoogleFonts.config.allowRuntimeFetching = false;
   });
 
-  testWidgets('renders the landing page and both live tools', (tester) async {
-    await tester.pumpWidget(SkyShakeApp(repository: _FakeTrackingRepository()));
+  testWidgets('renders the iOS-first tab shell and switches tabs', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _buildTestApp(repository: _FakeTrackingRepository()),
+    );
     await tester.pumpAndSettle();
 
-    expect(find.text('SkyShake'), findsWidgets);
-    expect(find.text('Check a route before the cabin does.'), findsOneWidget);
-    expect(find.text('Look up a flight'), findsOneWidget);
-    expect(find.text('Analyze a route'), findsOneWidget);
-    expect(find.text('Reality Check'), findsOneWidget);
+    expect(find.text('SkyShake'), findsOneWidget);
+    expect(find.text('Find a flight'), findsWidgets);
+    expect(find.text('Route'), findsOneWidget);
+
+    await tester.tap(find.text('Route'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Check a route'), findsWidgets);
+    expect(find.byKey(const Key('route-tab-screen')), findsOneWidget);
   });
 
   testWidgets('shows route analysis results after a successful query', (
     tester,
   ) async {
     await tester.pumpWidget(
-      SkyShakeApp(
+      _buildTestApp(
         repository: _FakeTrackingRepository(
           analyzeRouteHandler: (_) async => _sampleRouteAnalysis(),
         ),
@@ -33,14 +42,16 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    await tester.tap(find.text('Route'));
+    await tester.pumpAndSettle();
+
     await tester.ensureVisible(find.byKey(const Key('route-analysis-submit')));
     await tester.tap(find.byKey(const Key('route-analysis-submit')));
     await tester.pump();
     await tester.pumpAndSettle();
 
+    expect(find.text('Route result'), findsWidgets);
     expect(find.text('Route estimate'), findsOneWidget);
-    expect(find.text('SFO-JFK'), findsOneWidget);
-    expect(find.text('SkyShake route estimate'), findsOneWidget);
     expect(find.text('Route map'), findsOneWidget);
   });
 
@@ -48,7 +59,7 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(
-      SkyShakeApp(
+      _buildTestApp(
         repository: _FakeTrackingRepository(
           lookupFlightHandler: (_) async => _sampleFlightLookup(),
         ),
@@ -60,17 +71,15 @@ void main() {
       find.byKey(const Key('flight-number-field')),
       'AS331',
     );
-    await tester.ensureVisible(find.byKey(const Key('flight-lookup-submit')));
+    await _scrollTo(tester, find.byKey(const Key('flight-lookup-submit')));
     await tester.tap(find.byKey(const Key('flight-lookup-submit')));
     await tester.pump();
     await tester.pumpAndSettle();
 
     expect(find.text('AS331'), findsWidgets);
+    await _scrollTo(tester, find.byKey(const Key('use-flight-route-button')));
     expect(find.byKey(const Key('use-flight-route-button')), findsOneWidget);
 
-    await tester.ensureVisible(
-      find.byKey(const Key('use-flight-route-button')),
-    );
     await tester.tap(find.byKey(const Key('use-flight-route-button')));
     await tester.pumpAndSettle();
 
@@ -87,13 +96,14 @@ void main() {
     expect(departureField.controller?.text, 'LAX');
     expect(arrivalField.controller?.text, 'SEA');
     expect(aircraftField.controller?.text, 'Boeing 737 MAX 9');
+    expect(find.textContaining('Prefilled from AS331.'), findsOneWidget);
   });
 
   testWidgets('shows a no-result state for unmatched flight lookups', (
     tester,
   ) async {
     await tester.pumpWidget(
-      SkyShakeApp(
+      _buildTestApp(
         repository: _FakeTrackingRepository(
           lookupFlightHandler:
               (_) async => const FlightLookupResult(
@@ -119,7 +129,7 @@ void main() {
       find.byKey(const Key('flight-number-field')),
       'ZZ0000',
     );
-    await tester.ensureVisible(find.byKey(const Key('flight-lookup-submit')));
+    await _scrollTo(tester, find.byKey(const Key('flight-lookup-submit')));
     await tester.tap(find.byKey(const Key('flight-lookup-submit')));
     await tester.pump();
     await tester.pumpAndSettle();
@@ -132,7 +142,7 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(
-      SkyShakeApp(
+      _buildTestApp(
         repository: _FakeTrackingRepository(
           lookupFlightHandler: (_) async {
             throw const TrackingException(
@@ -148,7 +158,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.ensureVisible(find.byKey(const Key('flight-lookup-submit')));
+    await _scrollTo(tester, find.byKey(const Key('flight-lookup-submit')));
     await tester.tap(find.byKey(const Key('flight-lookup-submit')));
     await tester.pump();
     await tester.pumpAndSettle();
@@ -161,6 +171,25 @@ void main() {
     );
     expect(find.byKey(const Key('use-flight-route-button')), findsNothing);
   });
+}
+
+Future<void> _scrollTo(WidgetTester tester, Finder finder) async {
+  await tester.scrollUntilVisible(
+    finder,
+    180,
+    scrollable: find.byType(Scrollable).first,
+  );
+  await tester.pumpAndSettle();
+}
+
+Widget _buildTestApp({required TrackingRepository repository}) {
+  return SkyShakeApp(
+    repository: repository,
+    config: const AppConfig(
+      environment: AppEnvironment.development,
+      backendBaseUrl: 'http://127.0.0.1:8787',
+    ),
+  );
 }
 
 class _FakeTrackingRepository implements TrackingRepository {
@@ -239,31 +268,31 @@ RouteAnalysisResult _sampleRouteAnalysis() {
         ),
         TurbulenceWaypoint(
           waypoint: 1,
-          latitude: 40.2,
-          longitude: -105.0,
-          turbulenceScore: 0.48,
+          latitude: 39.8617,
+          longitude: -98.0,
+          turbulenceScore: 0.54,
           label: TurbulenceLabel.moderate,
-          windSpeed: 61,
+          windSpeed: 63,
           windGusts: 82,
-          windShear: 16,
-          temperature: 3,
-          cloudCover: 63,
-          cape: 420,
-          edr: 0.34,
+          windShear: 15,
+          temperature: 4,
+          cloudCover: 58,
+          cape: 240,
+          edr: 0.31,
         ),
         TurbulenceWaypoint(
           waypoint: 2,
           latitude: 40.6413,
           longitude: -73.7781,
-          turbulenceScore: 0.33,
+          turbulenceScore: 0.41,
           label: TurbulenceLabel.moderate,
-          windSpeed: 47,
-          windGusts: 63,
-          windShear: 10,
-          temperature: 9,
-          cloudCover: 41,
-          cape: 90,
-          edr: 0.21,
+          windSpeed: 58,
+          windGusts: 71,
+          windShear: 11,
+          temperature: 7,
+          cloudCover: 47,
+          cape: 110,
+          edr: 0.24,
         ),
       ],
     ),
@@ -274,15 +303,16 @@ FlightLookupResult _sampleFlightLookup() {
   return FlightLookupResult(
     flightNumber: 'AS331',
     flightDate: DateTime.utc(2026, 4, 21),
+    notFound: false,
     flight: FlightData(
       flightNumber: 'AS331',
       airline: 'Alaska Airlines',
       departure: 'LAX',
       departureAirport: 'Los Angeles International',
       arrival: 'SEA',
-      arrivalAirport: 'Seattle-Tacoma',
-      departureTime: DateTime.utc(2026, 4, 21, 18, 20),
-      arrivalTime: DateTime.utc(2026, 4, 21, 21, 5),
+      arrivalAirport: 'Seattle-Tacoma International',
+      departureTime: DateTime.utc(2026, 4, 21, 16, 15),
+      arrivalTime: DateTime.utc(2026, 4, 21, 18, 53),
       aircraft: 'Boeing 737 MAX 9',
       status: 'EnRoute',
       latitude: null,
@@ -292,14 +322,13 @@ FlightLookupResult _sampleFlightLookup() {
       isMockData: false,
       error: null,
     ),
-    notFound: false,
-    metadata: FlightLookupMetadata(
+    metadata: const FlightLookupMetadata(
       provider: 'aerodatabox',
       source: FlightLookupSource.live,
       partial: true,
-      missingFields: const ['location'],
-      cachedAt: DateTime.utc(2026, 4, 21, 18, 21),
-      expiresAt: DateTime.utc(2026, 4, 21, 18, 22),
+      missingFields: ['location'],
+      cachedAt: null,
+      expiresAt: null,
     ),
   );
 }
