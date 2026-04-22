@@ -20,14 +20,24 @@ class ModeBanner extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'This build requires a separate backend.',
+                    'Live now',
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'Route turbulence requests are sent to the SkyShake backend. '
-                    'Live weather is fetched server-side, and flight-number '
-                    'lookup only works after a real provider key is configured.',
+                    'Airport-to-airport route analysis pulls live weather '
+                    'server-side. If upstream data fails, SkyShake shows the '
+                    'failure instead of inventing fallback data.',
+                  ),
+                  const SizedBox(height: 14),
+                  Text(
+                    'Not yet',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Flight-number lookup stays out of the main promise until '
+                    'a real provider key is configured and validated.',
                   ),
                 ],
               ),

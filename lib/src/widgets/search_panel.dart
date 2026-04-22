@@ -25,14 +25,13 @@ class SearchPanel extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Analyze a route',
+              'Try the live preview',
               style: Theme.of(context).textTheme.headlineSmall,
             ),
             const SizedBox(height: 8),
             Text(
-              'Enter two IATA airport codes from the bundled catalog and an '
-              'aircraft type. SkyShake sends the route to the backend for live '
-              'weather analysis. This panel still does not do flight-number lookup.',
+              'Enter two IATA codes and an aircraft type. SkyShake sends the '
+              'route to the backend and returns a score, map, and segment notes.',
               style: Theme.of(context).textTheme.bodyMedium,
             ),
             const SizedBox(height: 20),
@@ -75,9 +74,11 @@ class SearchPanel extends StatelessWidget {
                     onSubmitted: (_) => onSearch(),
                   ),
                 ),
-                FilledButton.icon(
+                FilledButton(
                   onPressed: isLoading ? null : onSearch,
-                  icon:
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
                       isLoading
                           ? const SizedBox(
                             width: 18,
@@ -85,7 +86,10 @@ class SearchPanel extends StatelessWidget {
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
                           : const Icon(Icons.search),
-                  label: Text(isLoading ? 'Analyzing' : 'Check turbulence'),
+                      const SizedBox(width: 8),
+                      Text(isLoading ? 'Running' : 'Run check'),
+                    ],
+                  ),
                 ),
               ],
             ),
