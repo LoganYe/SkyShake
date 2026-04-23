@@ -245,6 +245,7 @@ class FlightLookupResult {
   const FlightLookupResult({
     required this.flightNumber,
     required this.flightDate,
+    required this.flightTime,
     required this.flight,
     required this.notFound,
     required this.metadata,
@@ -262,6 +263,7 @@ class FlightLookupResult {
     return FlightLookupResult(
       flightNumber: json['flightNumber']?.toString() ?? 'Unknown',
       flightDate: _toDateTime(json['flightDate']),
+      flightTime: json['flightTime']?.toString(),
       flight: flightPayload == null ? null : FlightData.fromJson(flightPayload),
       notFound: json['notFound'] == true,
       metadata: FlightLookupMetadata.fromJson(
@@ -274,6 +276,7 @@ class FlightLookupResult {
 
   final String flightNumber;
   final DateTime? flightDate;
+  final String? flightTime;
   final FlightData? flight;
   final bool notFound;
   final FlightLookupMetadata metadata;
@@ -284,7 +287,100 @@ class FlightLookupResult {
     return {
       'flightNumber': flightNumber,
       'flightDate': flightDate?.toIso8601String(),
+      'flightTime': flightTime,
       'flight': flight?.toJson(),
+      'notFound': notFound,
+      'meta': metadata.toJson(),
+    };
+  }
+}
+
+class FlightOptionsMetadata {
+  const FlightOptionsMetadata({
+    required this.provider,
+    required this.source,
+    required this.cachedAt,
+    required this.expiresAt,
+    required this.timeWindowStart,
+    required this.timeWindowEnd,
+  });
+
+  factory FlightOptionsMetadata.fromJson(Map<String, dynamic> json) {
+    return FlightOptionsMetadata(
+      provider: json['provider']?.toString() ?? 'unknown',
+      source: FlightLookupSourceX.fromString(
+        json['source']?.toString() ?? 'live',
+      ),
+      cachedAt: _toDateTime(json['cachedAt']),
+      expiresAt: _toDateTime(json['expiresAt']),
+      timeWindowStart: _toDateTime(json['timeWindowStart']),
+      timeWindowEnd: _toDateTime(json['timeWindowEnd']),
+    );
+  }
+
+  final String provider;
+  final FlightLookupSource source;
+  final DateTime? cachedAt;
+  final DateTime? expiresAt;
+  final DateTime? timeWindowStart;
+  final DateTime? timeWindowEnd;
+
+  Map<String, dynamic> toJson() {
+    return {
+      'provider': provider,
+      'source': source.name,
+      'cachedAt': cachedAt?.toIso8601String(),
+      'expiresAt': expiresAt?.toIso8601String(),
+      'timeWindowStart': timeWindowStart?.toIso8601String(),
+      'timeWindowEnd': timeWindowEnd?.toIso8601String(),
+    };
+  }
+}
+
+class FlightOptionsResult {
+  const FlightOptionsResult({
+    required this.departureCode,
+    required this.arrivalCode,
+    required this.departureLocal,
+    required this.flights,
+    required this.notFound,
+    required this.metadata,
+  });
+
+  factory FlightOptionsResult.fromJson(Map<String, dynamic> json) {
+    final rawFlights = (json['flights'] as List<dynamic>? ?? const <dynamic>[])
+        .whereType<Map>()
+        .map((flight) => FlightData.fromJson(Map<String, dynamic>.from(flight)))
+        .toList(growable: false);
+
+    return FlightOptionsResult(
+      departureCode: json['departureCode']?.toString() ?? '',
+      arrivalCode: json['arrivalCode']?.toString() ?? '',
+      departureLocal:
+          _toDateTime(json['departureLocal']) ?? DateTime.now(),
+      flights: rawFlights,
+      notFound: json['notFound'] == true,
+      metadata: FlightOptionsMetadata.fromJson(
+        Map<String, dynamic>.from(
+          (json['meta'] as Map?) ?? const <String, dynamic>{},
+        ),
+      ),
+    );
+  }
+
+  final String departureCode;
+  final String arrivalCode;
+  final DateTime departureLocal;
+  final List<FlightData> flights;
+  final bool notFound;
+  final FlightOptionsMetadata metadata;
+
+  Map<String, dynamic> toJson() {
+    return {
+      'departureCode': departureCode,
+      'arrivalCode': arrivalCode,
+      'departureLocal': departureLocal.toIso8601String(),
+      'flights': flights.map((flight) => flight.toJson()).toList(),
       'notFound': notFound,
       'meta': metadata.toJson(),
     };

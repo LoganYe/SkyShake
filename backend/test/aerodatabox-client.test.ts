@@ -253,6 +253,129 @@ describe('AeroDataBoxClient', () => {
       UpstreamServiceError,
     );
   });
+
+  test('searches airport departures by route and sorts the closest matching flight first', async () => {
+    let requestedUrl: URL | null = null;
+
+    const client = new AeroDataBoxClient(
+      configuredBackend(),
+      async (input) => {
+        requestedUrl = input instanceof URL ? input : new URL(String(input));
+
+        return new Response(
+          JSON.stringify({
+            departures: [
+              {
+                number: 'UA 999',
+                status: 'Scheduled',
+                isCargo: false,
+                movement: {
+                  airport: {
+                    iata: 'JFK',
+                    name: 'John F. Kennedy International Airport',
+                  },
+                  scheduledTime: {
+                    local: '2026-04-22T09:40:00-07:00',
+                    utc: '2026-04-22T16:40:00Z',
+                  },
+                },
+                airline: {
+                  name: 'United Airlines',
+                },
+                aircraft: {
+                  model: 'Boeing 737 MAX 8',
+                },
+              },
+              {
+                number: 'UA 857',
+                status: 'Boarding',
+                isCargo: false,
+                movement: {
+                  airport: {
+                    iata: 'JFK',
+                    name: 'John F. Kennedy International Airport',
+                  },
+                  revisedTime: {
+                    local: '2026-04-22T12:10:00-07:00',
+                    utc: '2026-04-22T19:10:00Z',
+                  },
+                },
+                airline: {
+                  name: 'United Airlines',
+                },
+                aircraft: {
+                  model: 'Boeing 777-300ER',
+                },
+              },
+              {
+                number: '5Y 321',
+                status: 'Scheduled',
+                isCargo: true,
+                movement: {
+                  airport: {
+                    iata: 'JFK',
+                    name: 'John F. Kennedy International Airport',
+                  },
+                  scheduledTime: {
+                    local: '2026-04-22T12:05:00-07:00',
+                    utc: '2026-04-22T19:05:00Z',
+                  },
+                },
+                airline: {
+                  name: 'Atlas Air',
+                },
+                aircraft: {
+                  model: 'Boeing 747-400F',
+                },
+              },
+              {
+                number: 'AA 101',
+                status: 'Scheduled',
+                isCargo: false,
+                movement: {
+                  airport: {
+                    iata: 'LHR',
+                    name: 'London Heathrow Airport',
+                  },
+                  scheduledTime: {
+                    local: '2026-04-22T12:00:00-07:00',
+                    utc: '2026-04-22T19:00:00Z',
+                  },
+                },
+                airline: {
+                  name: 'American Airlines',
+                },
+                aircraft: {
+                  model: 'Boeing 777-200ER',
+                },
+              },
+            ],
+          }),
+          {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+          },
+        );
+      },
+    );
+
+    const flights = await client.searchFlightsByRoute(
+      'sfo',
+      'jfk',
+      '2026-04-22T12:00',
+    );
+
+    expect(requestedUrl?.pathname).toBe(
+      '/flights/airports/iata/SFO/2026-04-22T09%3A00/2026-04-22T15%3A00',
+    );
+    expect(requestedUrl?.searchParams.get('withLocation')).toBe('false');
+    expect(flights).toHaveLength(2);
+    expect(flights[0]?.flightNumber).toBe('UA857');
+    expect(flights[0]?.departure).toBe('SFO');
+    expect(flights[0]?.arrival).toBe('JFK');
+    expect(flights[0]?.aircraft).toBe('Boeing 777-300ER');
+    expect(flights[1]?.flightNumber).toBe('UA999');
+  });
 });
 
 function configuredBackend() {

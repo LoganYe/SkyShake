@@ -1,6 +1,5 @@
 import { describe, expect, test } from 'vitest';
 
-import type { FlightLookupProvider } from '../src/clients/flight-lookup-provider.js';
 import { RateLimitError } from '../src/errors.js';
 import type { FlightDataPayload } from '../src/contracts.js';
 import { FlightLookupService } from '../src/services/flight-lookup.js';
@@ -19,6 +18,9 @@ describe('FlightLookupService', () => {
             ...sampleFlight(),
             status: calls == 1 ? 'EnRoute' : 'Arrived',
           };
+        },
+        async searchFlightsByRoute() {
+          return [];
         },
       },
       { now: () => now },
@@ -51,6 +53,9 @@ describe('FlightLookupService', () => {
           calls += 1;
           return null;
         },
+        async searchFlightsByRoute() {
+          return [];
+        },
       },
       { now: () => now },
     );
@@ -79,6 +84,9 @@ describe('FlightLookupService', () => {
           resolveLookup = resolve;
         });
       },
+      async searchFlightsByRoute() {
+        return [];
+      },
     });
 
     const firstRequest = service.lookupFlight('UA857', '2026-04-21');
@@ -95,6 +103,25 @@ describe('FlightLookupService', () => {
     expect(second.meta.source).toBe('live');
   });
 
+  test('treats different flight times as different lookup cache keys', async () => {
+    let calls = 0;
+
+    const service = new FlightLookupService('aerodatabox', {
+      async lookupFlight() {
+        calls += 1;
+        return sampleFlight();
+      },
+      async searchFlightsByRoute() {
+        return [];
+      },
+    });
+
+    await service.lookupFlight('UA857', '2026-04-21', '10:00');
+    await service.lookupFlight('UA857', '2026-04-21', '12:00');
+
+    expect(calls).toBe(2);
+  });
+
   test('does not cache provider errors', async () => {
     let calls = 0;
 
@@ -105,6 +132,9 @@ describe('FlightLookupService', () => {
           provider: 'aerodatabox',
           retryAfterSeconds: 2,
         });
+      },
+      async searchFlightsByRoute() {
+        return [];
       },
     });
 

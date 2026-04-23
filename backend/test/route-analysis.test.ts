@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'vitest';
 
 import { buildApp } from '../src/app.js';
+import { RateLimitError } from '../src/errors.js';
 import type { WeatherProvider } from '../src/services/turbulence.js';
 
 const noFlightProviderConfig = {
@@ -101,6 +102,51 @@ describe('route analysis endpoint', () => {
     expect(response.json()).toEqual({
       error: 'Invalid input: expected object, received undefined',
       code: 'invalid_request',
+    });
+
+    await app.close();
+  });
+
+  test('returns retryable provider errors when live weather data is rate limited', async () => {
+    const weatherProvider: WeatherProvider = {
+      async fetchSnapshot() {
+        throw new RateLimitError('Live weather data is temporarily rate limited.', {
+          provider: 'open-meteo',
+          retryAfterSeconds: 11,
+        });
+      },
+    };
+
+    const app = buildApp(noFlightProviderConfig, { weatherProvider });
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/route-analysis',
+      payload: {
+        departure: {
+          code: 'SFO',
+          name: 'San Francisco International',
+          latitude: 37.6213,
+          longitude: -122.379,
+        },
+        arrival: {
+          code: 'JFK',
+          name: 'John F. Kennedy International',
+          latitude: 40.6413,
+          longitude: -73.7781,
+        },
+        aircraftType: 'Boeing 787-9',
+      },
+    });
+
+    expect(response.statusCode).toBe(503);
+    expect(response.headers['retry-after']).toBe('11');
+    expect(response.json()).toEqual({
+      error: 'Live weather data is temporarily rate limited.',
+      code: 'provider_rate_limited',
+      provider: 'open-meteo',
+      retryable: true,
+      retryAfterSeconds: 11,
     });
 
     await app.close();

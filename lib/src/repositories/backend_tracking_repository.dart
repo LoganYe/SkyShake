@@ -82,6 +82,8 @@ class BackendTrackingRepository implements TrackingRepository {
         'flightNumber': normalizedFlightNumber,
         if (query.flightDate != null)
           'flightDate': DateFormat('yyyy-MM-dd').format(query.flightDate!),
+        if (query.flightTime != null && query.flightTime!.trim().isNotEmpty)
+          'flightTime': query.flightTime!.trim(),
       },
     );
 
@@ -90,6 +92,39 @@ class BackendTrackingRepository implements TrackingRepository {
     }
 
     return FlightLookupResult.fromJson(response.payload);
+  }
+
+  @override
+  Future<FlightOptionsResult> searchFlightsForRoute(
+    FlightOptionsQuery query,
+  ) async {
+    final departureCode = query.departureCode.trim().toUpperCase();
+    final arrivalCode = query.arrivalCode.trim().toUpperCase();
+
+    if (AirportCatalog.lookup(departureCode) == null ||
+        AirportCatalog.lookup(arrivalCode) == null) {
+      throw const TrackingException(
+        'Unsupported airport code. SkyShake only accepts airports from the bundled catalog.',
+        code: 'invalid_request',
+      );
+    }
+
+    final response = await _client.getJson(
+      '/v1/flights/options',
+      queryParameters: {
+        'departureCode': departureCode,
+        'arrivalCode': arrivalCode,
+        'departureLocal': DateFormat(
+          'yyyy-MM-ddTHH:mm',
+        ).format(query.departureLocal),
+      },
+    );
+
+    if (response.statusCode != 200) {
+      throw _buildTrackingException(response.payload, response.statusCode);
+    }
+
+    return FlightOptionsResult.fromJson(response.payload);
   }
 
   Map<String, dynamic> _expectJsonMap(dynamic value, String fieldName) {

@@ -61,6 +61,7 @@ void main() {
       final result = FlightLookupResult.fromJson({
         'flightNumber': 'UA857',
         'flightDate': '2026-04-21',
+        'flightTime': '12:05',
         'flight': {
           'flightNumber': 'UA857',
           'airline': 'United Airlines',
@@ -92,6 +93,7 @@ void main() {
 
       expect(result.flightNumber, 'UA857');
       expect(result.flightDate, DateTime.parse('2026-04-21'));
+      expect(result.flightTime, '12:05');
       expect(result.flight?.status, 'EnRoute');
       expect(result.metadata.provider, 'aerodatabox');
       expect(result.metadata.source, FlightLookupSource.cache);
@@ -118,6 +120,53 @@ void main() {
       expect(result.notFound, isTrue);
       expect(result.flight, isNull);
       expect(result.hasFlight, isFalse);
+    });
+  });
+
+  group('FlightOptionsResult', () {
+    test('parses route-based flight choices and metadata', () {
+      final result = FlightOptionsResult.fromJson({
+        'departureCode': 'SFO',
+        'arrivalCode': 'JFK',
+        'departureLocal': '2026-04-22T12:00',
+        'flights': [
+          {
+            'flightNumber': 'UA857',
+            'airline': 'United Airlines',
+            'departure': 'SFO',
+            'departureAirport': 'San Francisco International Airport',
+            'arrival': 'JFK',
+            'arrivalAirport': 'John F. Kennedy International Airport',
+            'departureTime': '2026-04-22T19:00:00Z',
+            'arrivalTime': '2026-04-23T01:10:00Z',
+            'aircraft': 'Boeing 777-300ER',
+            'status': 'Scheduled',
+            'latitude': null,
+            'longitude': null,
+            'altitude': null,
+            'velocity': null,
+            'isMockData': false,
+            'error': null,
+          },
+        ],
+        'notFound': false,
+        'meta': {
+          'provider': 'aerodatabox',
+          'source': 'cache',
+          'cachedAt': '2026-04-22T19:01:00Z',
+          'expiresAt': '2026-04-22T19:02:00Z',
+          'timeWindowStart': '2026-04-22T09:00',
+          'timeWindowEnd': '2026-04-22T15:00',
+        },
+      });
+
+      expect(result.departureCode, 'SFO');
+      expect(result.arrivalCode, 'JFK');
+      expect(result.flights, hasLength(1));
+      expect(result.flights.first.flightNumber, 'UA857');
+      expect(result.metadata.source, FlightLookupSource.cache);
+      expect(result.metadata.timeWindowStart, DateTime.parse('2026-04-22T09:00'));
+      expect(result.metadata.timeWindowEnd, DateTime.parse('2026-04-22T15:00'));
     });
   });
 

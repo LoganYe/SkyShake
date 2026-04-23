@@ -25,15 +25,33 @@ class RouteAnalysisResult {
 }
 
 class FlightLookupQuery {
-  const FlightLookupQuery({required this.flightNumber, this.flightDate});
+  const FlightLookupQuery({
+    required this.flightNumber,
+    this.flightDate,
+    this.flightTime,
+  });
 
   final String flightNumber;
   final DateTime? flightDate;
+  final String? flightTime;
+}
+
+class FlightOptionsQuery {
+  const FlightOptionsQuery({
+    required this.departureCode,
+    required this.arrivalCode,
+    required this.departureLocal,
+  });
+
+  final String departureCode;
+  final String arrivalCode;
+  final DateTime departureLocal;
 }
 
 abstract interface class TrackingRepository {
   Future<RouteAnalysisResult> analyzeRoute(RouteQuery query);
   Future<FlightLookupResult> lookupFlight(FlightLookupQuery query);
+  Future<FlightOptionsResult> searchFlightsForRoute(FlightOptionsQuery query);
 }
 
 class TrackingException implements Exception {

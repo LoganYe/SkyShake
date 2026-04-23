@@ -4,28 +4,41 @@ import { ConfigurationError } from '../errors.js';
 
 import { AeroDataBoxClient } from './aerodatabox-client.js';
 
-export interface FlightLookupProvider {
+export interface FlightDataProvider {
   lookupFlight(
     flightNumber: string,
     flightDate?: string,
+    flightTime?: string,
   ): Promise<FlightDataPayload | null>;
+
+  searchFlightsByRoute(
+    departureCode: string,
+    arrivalCode: string,
+    departureLocal: string,
+  ): Promise<FlightDataPayload[]>;
 }
 
-export function createFlightLookupProvider(
+export function createFlightDataProvider(
   config: BackendConfig,
-): FlightLookupProvider {
+): FlightDataProvider {
   switch (config.flightProvider) {
     case 'none':
-      return new DisabledFlightLookupProvider();
+      return new DisabledFlightDataProvider();
     case 'aerodatabox':
       return new AeroDataBoxClient(config);
   }
 }
 
-class DisabledFlightLookupProvider implements FlightLookupProvider {
+class DisabledFlightDataProvider implements FlightDataProvider {
   async lookupFlight(): Promise<FlightDataPayload | null> {
     throw new ConfigurationError(
       'Flight lookup is disabled because FLIGHT_PROVIDER is set to none.',
+    );
+  }
+
+  async searchFlightsByRoute(): Promise<FlightDataPayload[]> {
+    throw new ConfigurationError(
+      'Route-based flight discovery is disabled because FLIGHT_PROVIDER is set to none.',
     );
   }
 }

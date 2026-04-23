@@ -142,6 +142,46 @@ void main() {
       );
     });
 
+    test('surfaces structured retryable route-analysis errors', () async {
+      final repository = BackendTrackingRepository(
+        config,
+        client: _FakeBackendApiClient(
+          onPost:
+              (_, {body}) async => const ApiPayloadResponse(
+                statusCode: 503,
+                payload: {
+                  'error': 'Live weather data is temporarily rate limited.',
+                  'code': 'provider_rate_limited',
+                  'provider': 'open-meteo',
+                  'retryable': true,
+                  'retryAfterSeconds': 11,
+                },
+              ),
+        ),
+      );
+
+      expect(
+        () => repository.analyzeRoute(
+          const RouteQuery(
+            departureCode: 'SFO',
+            arrivalCode: 'JFK',
+            aircraftType: 'Boeing 787-9',
+          ),
+        ),
+        throwsA(
+          isA<TrackingException>()
+              .having((error) => error.code, 'code', 'provider_rate_limited')
+              .having((error) => error.provider, 'provider', 'open-meteo')
+              .having((error) => error.retryable, 'retryable', isTrue)
+              .having(
+                (error) => error.retryAfterSeconds,
+                'retryAfterSeconds',
+                11,
+              ),
+        ),
+      );
+    });
+
     test(
       'turns route-analysis transport failures into actionable messages',
       () async {
@@ -197,6 +237,7 @@ void main() {
                 payload: {
                   'flightNumber': 'UA857',
                   'flightDate': '2026-04-21',
+                  'flightTime': '12:05',
                   'flight': {
                     'flightNumber': 'UA857',
                     'airline': 'United Airlines',
@@ -234,6 +275,7 @@ void main() {
           FlightLookupQuery(
             flightNumber: 'UA857',
             flightDate: DateTime.utc(2026, 4, 21),
+            flightTime: '12:05',
           ),
         );
 
@@ -241,9 +283,11 @@ void main() {
         expect(requestedQueryParameters, {
           'flightNumber': 'UA857',
           'flightDate': '2026-04-21',
+          'flightTime': '12:05',
         });
         expect(result.notFound, isFalse);
         expect(result.flight?.flightNumber, 'UA857');
+        expect(result.flightTime, '12:05');
         expect(result.metadata.provider, 'aerodatabox');
         expect(result.metadata.source, FlightLookupSource.cache);
         expect(result.metadata.partial, isTrue);
@@ -331,6 +375,7 @@ void main() {
                 payload: {
                   'flightNumber': 'ZZ0000',
                   'flightDate': null,
+                  'flightTime': null,
                   'flight': null,
                   'notFound': true,
                   'meta': {
@@ -355,6 +400,78 @@ void main() {
       expect(result.metadata.provider, 'aerodatabox');
       expect(result.metadata.source, FlightLookupSource.live);
     });
+
+    test('gets route-based flight options from the backend', () async {
+      late String requestedPath;
+      late Map<String, dynamic>? requestedQueryParameters;
+
+      final repository = BackendTrackingRepository(
+        config,
+        client: _FakeBackendApiClient(
+          onGet: (path, {queryParameters}) async {
+            requestedPath = path;
+            requestedQueryParameters = queryParameters;
+            return ApiPayloadResponse(
+              statusCode: 200,
+              payload: {
+                'departureCode': 'SFO',
+                'arrivalCode': 'JFK',
+                'departureLocal': '2026-04-22T12:00:00.000',
+                'flights': [
+                  {
+                    'flightNumber': 'UA857',
+                    'airline': 'United Airlines',
+                    'departure': 'SFO',
+                    'departureAirport': 'San Francisco',
+                    'arrival': 'JFK',
+                    'arrivalAirport': 'John F. Kennedy International',
+                    'departureTime': '2026-04-22T19:00:00Z',
+                    'arrivalTime': '2026-04-23T01:10:00Z',
+                    'aircraft': 'Boeing 777-300ER',
+                    'status': 'Scheduled',
+                    'latitude': null,
+                    'longitude': null,
+                    'altitude': null,
+                    'velocity': null,
+                    'isMockData': false,
+                    'error': null,
+                  },
+                ],
+                'notFound': false,
+                'meta': {
+                  'provider': 'aerodatabox',
+                  'source': 'live',
+                  'cachedAt': '2026-04-22T19:01:00Z',
+                  'expiresAt': '2026-04-22T19:02:00Z',
+                  'timeWindowStart': '2026-04-22T09:00',
+                  'timeWindowEnd': '2026-04-22T15:00',
+                },
+              },
+            );
+          },
+        ),
+      );
+
+      final result = await repository.searchFlightsForRoute(
+        FlightOptionsQuery(
+          departureCode: 'SFO',
+          arrivalCode: 'JFK',
+          departureLocal: DateTime(2026, 4, 22, 12),
+        ),
+      );
+
+      expect(requestedPath, '/v1/flights/options');
+      expect(requestedQueryParameters, {
+        'departureCode': 'SFO',
+        'arrivalCode': 'JFK',
+        'departureLocal': '2026-04-22T12:00',
+      });
+      expect(result.notFound, isFalse);
+      expect(result.flights, hasLength(1));
+      expect(result.flights.first.flightNumber, 'UA857');
+      expect(result.metadata.provider, 'aerodatabox');
+      expect(result.metadata.source, FlightLookupSource.live);
+    });
   });
 }
 
@@ -374,7 +491,7 @@ class _FakeBackendApiClient implements BackendApiClient {
   Future<ApiPayloadResponse> getJson(
     String path, {
     Map<String, dynamic>? queryParameters,
-  }) {
+  }) async {
     final handler = onGet;
     if (handler == null) {
       throw UnimplementedError('getJson was not configured for this test.');
@@ -384,7 +501,7 @@ class _FakeBackendApiClient implements BackendApiClient {
   }
 
   @override
-  Future<ApiPayloadResponse> postJson(String path, {Object? body}) {
+  Future<ApiPayloadResponse> postJson(String path, {Object? body}) async {
     final handler = onPost;
     if (handler == null) {
       throw UnimplementedError('postJson was not configured for this test.');
