@@ -15,6 +15,16 @@ export const routeAnalysisRequestSchema = z.object({
 
 export type RouteAnalysisRequest = z.infer<typeof routeAnalysisRequestSchema>;
 
+export const routeAnalysisAirportRequestSchema = z.object({
+  departureCode: z.string().trim().min(3).max(4),
+  arrivalCode: z.string().trim().min(3).max(4),
+  aircraftType: z.string().trim().optional(),
+});
+
+export type RouteAnalysisAirportRequest = z.infer<
+  typeof routeAnalysisAirportRequestSchema
+>;
+
 export interface FlightDataPayload {
   flightNumber: string;
   airline: string;

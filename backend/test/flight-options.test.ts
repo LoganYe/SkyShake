@@ -98,6 +98,7 @@ function disabledFlightConfig() {
   return {
     host: '127.0.0.1',
     port: 8787,
+    appStoreUrl: null,
     flightProvider: 'none' as const,
     aeroDataBox: {
       marketplace: 'rapidapi' as const,

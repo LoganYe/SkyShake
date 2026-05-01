@@ -1,6 +1,8 @@
 # SkyShake
 
 SkyShake is now an iOS-first Flutter app backed by a separate Node/Fastify API.
+That same Node service now also serves the deployable landing page, so the
+marketing/demo route preview no longer depends on building Flutter web.
 
 That split is intentional. The mobile app does not talk directly to third-party
 flight providers, because that design falls apart as soon as a provider needs
@@ -8,7 +10,8 @@ secrets, rate limits, billing controls, or request normalization.
 
 ## Current Stack
 
-- Frontend: Flutter + Dart
+- Mobile frontend: Flutter + Dart
+- Deployable landing page: Node/Fastify-served HTML/CSS/JS
 - Mobile app shell: Flutter Material 3 with a two-tab iOS-first layout
 - App state: `provider`
 - Network client: `dio`
@@ -19,6 +22,8 @@ secrets, rate limits, billing controls, or request normalization.
 
 ## What Is Truly Live Right Now
 
+- The landing page at `/` is served directly from the Node backend and can run
+  a live route check without a Flutter web build.
 - Route turbulence analysis by airport pair is live, because the backend fetches
   real Open-Meteo weather data for each waypoint.
 - Flight-number lookup is exposed in the Flutter UI and backed by
@@ -43,7 +48,7 @@ secrets, rate limits, billing controls, or request normalization.
 ## Repo Layout
 
 - `lib/`: Flutter frontend
-- `backend/`: Node/TypeScript backend service
+- `backend/`: Node/TypeScript backend service and deployable landing page
 - `test/`: Flutter tests
 - `web/`: Flutter web shell
 
@@ -103,11 +108,16 @@ cp backend/.env.example backend/.env
 Recommended backend env for local development:
 
 ```bash
+APP_STORE_URL=https://apps.apple.com/us/app/your-app/id123456789
 FLIGHT_PROVIDER=aerodatabox
 AERODATABOX_MARKETPLACE=rapidapi
 AERODATABOX_API_KEY=your-key-here
 AERODATABOX_ENABLE_FLIGHT_PLAN=false
 ```
+
+`APP_STORE_URL` drives the landing page's primary CTA. If it is omitted, the
+landing page falls back to an App Store search URL for `SkyShake` instead of
+pretending a listing URL is known.
 
 4. Start the backend:
 

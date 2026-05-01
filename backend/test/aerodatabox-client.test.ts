@@ -16,6 +16,7 @@ describe('AeroDataBoxClient', () => {
       {
         host: '127.0.0.1',
         port: 8787,
+        appStoreUrl: null,
         flightProvider: 'aerodatabox',
         aeroDataBox: {
           marketplace: 'rapidapi',
@@ -190,6 +191,7 @@ describe('AeroDataBoxClient', () => {
     const client = new AeroDataBoxClient({
       host: '127.0.0.1',
       port: 8787,
+      appStoreUrl: null,
       flightProvider: 'aerodatabox',
       aeroDataBox: {
         marketplace: 'rapidapi',
@@ -382,6 +384,7 @@ function configuredBackend() {
   return {
     host: '127.0.0.1',
     port: 8787,
+    appStoreUrl: null,
     flightProvider: 'aerodatabox' as const,
     aeroDataBox: {
       marketplace: 'rapidapi' as const,
