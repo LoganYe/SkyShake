@@ -2,6 +2,7 @@ import cors from '@fastify/cors';
 import Fastify from 'fastify';
 import { ZodError } from 'zod';
 
+import { lookupAirport } from './airport-catalog.js';
 import {
   createFlightDataProvider,
   type FlightDataProvider,
@@ -11,9 +12,11 @@ import { readConfig, type BackendConfig } from './config.js';
 import {
   flightOptionsQuerySchema,
   flightLookupQuerySchema,
+  routeAnalysisAirportRequestSchema,
   routeAnalysisRequestSchema,
 } from './contracts.js';
 import { ApiError } from './errors.js';
+import { renderLandingPage } from './landing-page.js';
 import { FlightOptionsService } from './services/flight-options.js';
 import { analyzeRouteWithWeather, type WeatherProvider } from './services/turbulence.js';
 import { FlightLookupService } from './services/flight-lookup.js';
@@ -83,6 +86,16 @@ export function buildApp(
     });
   });
 
+  app.get('/', async (_request, reply) => {
+    return reply
+      .type('text/html; charset=utf-8')
+      .send(
+        renderLandingPage({
+          appStoreUrl: config.appStoreUrl,
+        }),
+      );
+  });
+
   app.get('/healthz', async () => {
     return {
       ok: true,
@@ -106,6 +119,65 @@ export function buildApp(
   app.post('/v1/route-analysis', async (request) => {
     const payload = routeAnalysisRequestSchema.parse(request.body);
     return analyzeRouteWithWeather(payload, openMeteoClient);
+  });
+
+  app.post('/v1/route-analysis/airports', async (request) => {
+    const payload = routeAnalysisAirportRequestSchema.parse(request.body);
+    const departureCode = payload.departureCode.trim().toUpperCase();
+    const arrivalCode = payload.arrivalCode.trim().toUpperCase();
+
+    if (departureCode === arrivalCode) {
+      throw new ApiError(400, 'Departure and arrival airports must be different.', {
+        code: 'invalid_request',
+      });
+    }
+
+    const departure = lookupAirport(departureCode);
+    const arrival = lookupAirport(arrivalCode);
+    const unsupportedCodes = [
+      departure == null ? departureCode : null,
+      arrival == null ? arrivalCode : null,
+    ].filter((value): value is string => value != null);
+
+    if (unsupportedCodes.length > 0) {
+      throw new ApiError(
+        400,
+        `Unsupported airport code: ${unsupportedCodes.join(
+          ', ',
+        )}. This page only accepts airports from the bundled SkyShake catalog.`,
+        {
+          code: 'unsupported_airport',
+        },
+      );
+    }
+
+    if (departure == null || arrival == null) {
+      throw new ApiError(500, 'Airport catalog lookup failed unexpectedly.', {
+        code: 'internal_error',
+      });
+    }
+
+    return analyzeRouteWithWeather(
+      {
+        departure: {
+          code: departure.code,
+          name: departure.name,
+          latitude: departure.latitude,
+          longitude: departure.longitude,
+        },
+        arrival: {
+          code: arrival.code,
+          name: arrival.name,
+          latitude: arrival.latitude,
+          longitude: arrival.longitude,
+        },
+        aircraftType:
+          payload.aircraftType == null || payload.aircraftType.trim().length === 0
+            ? 'Boeing 737 MAX 8'
+            : payload.aircraftType.trim(),
+      },
+      openMeteoClient,
+    );
   });
 
   app.get('/v1/flights/search', async (request) => {

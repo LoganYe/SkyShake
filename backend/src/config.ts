@@ -8,6 +8,7 @@ export type AeroDataBoxMarketplace = 'rapidapi' | 'apimarket';
 export interface BackendConfig {
   host: string;
   port: number;
+  appStoreUrl: string | null;
   flightProvider: FlightProvider;
   aeroDataBox: {
     marketplace: AeroDataBoxMarketplace;
@@ -20,6 +21,7 @@ export interface BackendConfig {
 const envSchema = z.object({
   HOST: z.string().default('127.0.0.1'),
   PORT: z.coerce.number().int().min(1).max(65535).default(8787),
+  APP_STORE_URL: z.string().trim().optional(),
   FLIGHT_PROVIDER: z.enum(['none', 'aerodatabox']).default('none'),
   AERODATABOX_MARKETPLACE: z.enum(['rapidapi', 'apimarket']).default('rapidapi'),
   AERODATABOX_API_KEY: z.string().trim().optional(),
@@ -33,6 +35,7 @@ export function readConfig(env: NodeJS.ProcessEnv = process.env) {
   return {
     host: parsed.HOST,
     port: parsed.PORT,
+    appStoreUrl: parseOptionalUrlEnv('APP_STORE_URL', parsed.APP_STORE_URL),
     flightProvider: parsed.FLIGHT_PROVIDER,
     aeroDataBox: {
       marketplace: parsed.AERODATABOX_MARKETPLACE,
@@ -67,4 +70,25 @@ function parseBooleanEnv(value: string | undefined, fallback: boolean) {
         `Expected a boolean-like value for AERODATABOX_ENABLE_FLIGHT_PLAN, received "${value}".`,
       );
   }
+}
+
+function parseOptionalUrlEnv(name: string, value: string | undefined) {
+  if (value == null || value.trim().length === 0) {
+    return null;
+  }
+
+  let parsedUrl: URL;
+  try {
+    parsedUrl = new URL(value);
+  } catch {
+    throw new Error(`Expected ${name} to be a valid absolute URL, received "${value}".`);
+  }
+
+  if (parsedUrl.protocol !== 'https:' && parsedUrl.protocol !== 'http:') {
+    throw new Error(
+      `Expected ${name} to use http or https, received "${parsedUrl.protocol}".`,
+    );
+  }
+
+  return parsedUrl.toString();
 }
