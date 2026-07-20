@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:skyshake/src/models/flight_models.dart';
 import 'package:skyshake/src/repositories/tracking_repository.dart';
@@ -78,6 +80,47 @@ void main() {
         store.dispose();
       },
     );
+
+    test('ignores overlapping lookup requests', () async {
+      final completer = Completer<FlightLookupResult>();
+      var calls = 0;
+      final store = FlightLookupStore(
+        _FakeTrackingRepository(
+          lookupFlightHandler: (_) {
+            calls += 1;
+            return completer.future;
+          },
+        ),
+      );
+
+      final firstRequest = store.lookupFlight();
+      await store.lookupFlight();
+
+      expect(calls, 1);
+      expect(store.isLoading, isTrue);
+
+      completer.complete(
+        const FlightLookupResult(
+          flightNumber: 'UA857',
+          flightDate: null,
+          flightTime: null,
+          flight: null,
+          notFound: true,
+          metadata: FlightLookupMetadata(
+            provider: 'aerodatabox',
+            source: FlightLookupSource.live,
+            partial: false,
+            missingFields: [],
+            cachedAt: null,
+            expiresAt: null,
+          ),
+        ),
+      );
+      await firstRequest;
+
+      expect(store.isLoading, isFalse);
+      store.dispose();
+    });
   });
 }
 

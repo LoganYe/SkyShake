@@ -51,7 +51,7 @@ class SearchPanel extends StatelessWidget {
                       labelText: 'From',
                       hintText: 'SFO',
                     ),
-                    onSubmitted: (_) => onSearch(),
+                    onSubmitted: isLoading ? null : (_) => onSearch(),
                   ),
                   const SizedBox(height: 12),
                   TextField(
@@ -62,7 +62,7 @@ class SearchPanel extends StatelessWidget {
                       labelText: 'To',
                       hintText: 'JFK',
                     ),
-                    onSubmitted: (_) => onSearch(),
+                    onSubmitted: isLoading ? null : (_) => onSearch(),
                   ),
                   const SizedBox(height: 12),
                   TextField(
@@ -72,7 +72,7 @@ class SearchPanel extends StatelessWidget {
                       labelText: 'Aircraft',
                       hintText: 'Boeing 787-9',
                     ),
-                    onSubmitted: (_) => onSearch(),
+                    onSubmitted: isLoading ? null : (_) => onSearch(),
                   ),
                   const SizedBox(height: 12),
                   SizedBox(
@@ -117,7 +117,7 @@ class SearchPanel extends StatelessWidget {
                             labelText: 'From',
                             hintText: 'SFO',
                           ),
-                          onSubmitted: (_) => onSearch(),
+                          onSubmitted: isLoading ? null : (_) => onSearch(),
                         ),
                       ),
                       SizedBox(
@@ -130,7 +130,7 @@ class SearchPanel extends StatelessWidget {
                             labelText: 'To',
                             hintText: 'JFK',
                           ),
-                          onSubmitted: (_) => onSearch(),
+                          onSubmitted: isLoading ? null : (_) => onSearch(),
                         ),
                       ),
                       SizedBox(
@@ -142,7 +142,7 @@ class SearchPanel extends StatelessWidget {
                             labelText: 'Aircraft',
                             hintText: 'Boeing 787-9',
                           ),
-                          onSubmitted: (_) => onSearch(),
+                          onSubmitted: isLoading ? null : (_) => onSearch(),
                         ),
                       ),
                       FilledButton(

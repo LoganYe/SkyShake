@@ -55,6 +55,21 @@ export class UpstreamServiceError extends ApiError {
   }
 }
 
+export class UpstreamTimeoutError extends ApiError {
+  constructor(
+    message: string,
+    options: Partial<ApiErrorOptions> = {},
+  ) {
+    super(504, message, {
+      code: options.code ?? 'provider_timeout',
+      provider: options.provider,
+      retryable: options.retryable ?? true,
+      retryAfterSeconds: options.retryAfterSeconds,
+    });
+    this.name = 'UpstreamTimeoutError';
+  }
+}
+
 export class RateLimitError extends ApiError {
   constructor(
     message: string,

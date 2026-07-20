@@ -92,6 +92,7 @@ describe('FlightLookupService', () => {
     const firstRequest = service.lookupFlight('UA857', '2026-04-21');
     const secondRequest = service.lookupFlight('ua 857', '2026-04-21');
 
+    await Promise.resolve();
     expect(calls).toBe(1);
 
     resolveLookup?.(sampleFlight());
@@ -146,6 +147,29 @@ describe('FlightLookupService', () => {
     );
 
     expect(calls).toBe(2);
+  });
+
+  test('bounds cached lookup cardinality with least-recently-used eviction', async () => {
+    let calls = 0;
+    const service = new FlightLookupService(
+      'aerodatabox',
+      {
+        async lookupFlight(flightNumber) {
+          calls += 1;
+          return { ...sampleFlight(), flightNumber };
+        },
+        async searchFlightsByRoute() {
+          return [];
+        },
+      },
+      { maxCacheEntries: 1 },
+    );
+
+    await service.lookupFlight('UA857');
+    await service.lookupFlight('AA101');
+    await service.lookupFlight('UA857');
+
+    expect(calls).toBe(3);
   });
 });
 

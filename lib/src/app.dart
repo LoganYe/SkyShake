@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import 'core/app_config.dart';
 import 'core/app_theme.dart';
 import 'repositories/tracking_repository.dart';
-import 'screens/home_screen.dart';
+import 'screens/app_shell.dart';
 import 'stores/flight_lookup_store.dart';
 import 'stores/route_analysis_store.dart';
 import 'stores/route_draft_store.dart';
@@ -39,7 +39,7 @@ class SkyShakeApp extends StatelessWidget {
         title: 'SkyShake',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.darkTheme(),
-        home: const HomeScreen(),
+        home: const AppShell(),
       ),
     );
   }

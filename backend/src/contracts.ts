@@ -25,6 +25,12 @@ export type RouteAnalysisAirportRequest = z.infer<
   typeof routeAnalysisAirportRequestSchema
 >;
 
+export const appAttestRegistrationSchema = z.object({
+  challenge: z.string().min(32).max(128),
+  keyId: z.string().min(32).max(256),
+  attestation: z.string().min(64).max(48_000),
+});
+
 export interface FlightDataPayload {
   flightNumber: string;
   airline: string;
@@ -100,7 +106,6 @@ export interface TurbulenceWaypointPayload {
   temperature: number;
   cloudCover: number;
   cape: number;
-  edr: number;
 }
 
 export interface TurbulenceReportPayload {
@@ -113,6 +118,11 @@ export interface TurbulenceReportPayload {
 
 export interface RouteAnalysisResponsePayload {
   notice: string;
+  model: {
+    name: 'weather-proxy';
+    version: 2;
+    operationalUse: false;
+  };
   flightData: FlightDataPayload;
   report: TurbulenceReportPayload;
 }

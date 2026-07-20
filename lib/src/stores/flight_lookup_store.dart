@@ -17,6 +17,10 @@ class FlightLookupStore extends ChangeNotifier {
   bool isLoading = false;
 
   Future<void> lookupFlight() async {
+    if (isLoading) {
+      return;
+    }
+
     FocusManager.instance.primaryFocus?.unfocus();
 
     isLoading = true;

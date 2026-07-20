@@ -1,3 +1,5 @@
+import { randomBytes } from 'node:crypto';
+
 import { airportList } from './airport-catalog.js';
 
 interface LandingPageOptions {
@@ -5,6 +7,26 @@ interface LandingPageOptions {
 }
 
 const fallbackAppStoreUrl = 'https://apps.apple.com/us/search?term=SkyShake';
+
+export function createLandingPage(options: LandingPageOptions) {
+  const nonce = randomBytes(18).toString('base64url');
+  return {
+    html: renderLandingPage(options, nonce),
+    contentSecurityPolicy: [
+      "default-src 'none'",
+      `script-src 'nonce-${nonce}'`,
+      "script-src-attr 'none'",
+      `style-src 'nonce-${nonce}' https://fonts.googleapis.com`,
+      "style-src-attr 'none'",
+      'font-src https://fonts.gstatic.com',
+      "connect-src 'self'",
+      "base-uri 'none'",
+      "form-action 'self'",
+      "frame-ancestors 'none'",
+      "object-src 'none'",
+    ].join('; '),
+  };
+}
 
 const styles = String.raw`
   :root {
@@ -508,16 +530,21 @@ const styles = String.raw`
   }
 
   .progress {
+    appearance: none;
     width: 100%;
     height: 12px;
+    border: 0;
     border-radius: 999px;
     background: rgba(255, 255, 255, 0.08);
     overflow: hidden;
   }
 
-  .progress > span {
-    display: block;
-    height: 100%;
+  .progress::-webkit-progress-bar {
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  .progress::-webkit-progress-value,
+  .progress::-moz-progress-bar {
     border-radius: 999px;
     background: linear-gradient(90deg, var(--smooth), var(--moderate), var(--severe));
   }
@@ -774,7 +801,7 @@ const styles = String.raw`
   }
 `;
 
-export function renderLandingPage(options: LandingPageOptions) {
+function renderLandingPage(options: LandingPageOptions, nonce: string) {
   const appStoreUrl = options.appStoreUrl ?? fallbackAppStoreUrl;
   const airportOptions = airportList
     .map(
@@ -805,7 +832,7 @@ export function renderLandingPage(options: LandingPageOptions) {
       href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap"
       rel="stylesheet"
     />
-    <style>${styles}</style>
+    <style nonce="${nonce}">${styles}</style>
   </head>
   <body>
     <div class="page">
@@ -983,7 +1010,7 @@ ${airportOptions}
         </section>
       </main>
     </div>
-    <script>${clientScript}</script>
+    <script nonce="${nonce}">${clientScript}</script>
   </body>
 </html>`;
 }
@@ -999,6 +1026,7 @@ function buildClientScript(appStoreUrl: string) {
       const submitButton = document.querySelector('[data-submit]');
       const submitLabel = document.querySelector('[data-submit-label]');
       const submitHint = document.querySelector('[data-submit-hint]');
+      let isSubmitting = false;
 
       if (!form || !results || !errorBox || !errorText || !submitButton || !submitLabel || !submitHint) {
         return;
@@ -1016,14 +1044,35 @@ function buildClientScript(appStoreUrl: string) {
         return String(value || '').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4);
       }
 
-      function escapeHtml(value) {
-        return String(value ?? '').replace(/[&<>"']/g, (character) => ({
-          '&': '&amp;',
-          '<': '&lt;',
-          '>': '&gt;',
-          '"': '&quot;',
-          "'": '&#39;',
-        })[character] || character);
+      function element(tagName, className, text) {
+        const node = document.createElement(tagName);
+        if (className) {
+          node.className = className;
+        }
+        if (text !== undefined) {
+          node.textContent = String(text);
+        }
+        return node;
+      }
+
+      function append(parent, ...children) {
+        children.forEach((child) => {
+          if (child == null) {
+            return;
+          }
+          parent.appendChild(
+            child instanceof Node ? child : document.createTextNode(String(child)),
+          );
+        });
+        return parent;
+      }
+
+      function svgElement(tagName, attributes = {}) {
+        const node = document.createElementNS('http://www.w3.org/2000/svg', tagName);
+        Object.entries(attributes).forEach(([name, value]) => {
+          node.setAttribute(name, String(value));
+        });
+        return node;
       }
 
       function severityClass(label) {
@@ -1078,7 +1127,11 @@ function buildClientScript(appStoreUrl: string) {
       }
 
       function renderMetric(label, value) {
-        return '<div class="metric"><span class="metric-label">' + escapeHtml(label) + '</span><strong>' + escapeHtml(value) + '</strong></div>';
+        return append(
+          element('div', 'metric'),
+          element('span', 'metric-label', label),
+          element('strong', '', value),
+        );
       }
 
       function selectHighlights(waypoints) {
@@ -1124,7 +1177,7 @@ function buildClientScript(appStoreUrl: string) {
       function buildTrace(report, flightData) {
         const waypoints = unwrapWaypoints(report.waypoints || []);
         if (waypoints.length === 0) {
-          return '<p>Route trace unavailable.</p>';
+          return element('p', '', 'Route trace unavailable.');
         }
 
         const width = 980;
@@ -1146,37 +1199,79 @@ function buildClientScript(appStoreUrl: string) {
         });
 
         const path = points.map((point, index) => (index === 0 ? 'M' : 'L') + point.x.toFixed(1) + ',' + point.y.toFixed(1)).join(' ');
-        const dots = points.map((point) => '<circle class="trace-point ' + severityClass(point.label) + '" cx="' + point.x.toFixed(1) + '" cy="' + point.y.toFixed(1) + '" r="7" />').join('');
         const start = points[0];
         const end = points[points.length - 1];
-
-        return [
-          '<svg viewBox="0 0 ', width, ' ', height, '" role="img" aria-label="Route trace from ', escapeHtml(flightData.departure), ' to ', escapeHtml(flightData.arrival), '">',
-          '<defs><linearGradient id="traceGradient" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#63d6ab" /><stop offset="55%" stop-color="#f7ba5d" /><stop offset="100%" stop-color="#ff7b67" /></linearGradient></defs>',
-          '<line class="grid-line" x1="0" y1="64" x2="', width, '" y2="64" />',
-          '<line class="grid-line" x1="0" y1="160" x2="', width, '" y2="160" />',
-          '<line class="grid-line" x1="0" y1="256" x2="', width, '" y2="256" />',
-          '<path class="trace-line" d="', path, '" />',
-          dots,
-          '<text class="trace-label" x="', start.x.toFixed(1), '" y="', (start.y - 18).toFixed(1), '">', escapeHtml(flightData.departure), '</text>',
-          '<text class="trace-label end" x="', end.x.toFixed(1), '" y="', (end.y - 18).toFixed(1), '">', escapeHtml(flightData.arrival), '</text>',
-          '</svg>',
-        ].join('');
+        const svg = svgElement('svg', {
+          viewBox: '0 0 ' + width + ' ' + height,
+          role: 'img',
+          'aria-label': 'Route trace from ' + String(flightData.departure || '') + ' to ' + String(flightData.arrival || ''),
+        });
+        const definitions = svgElement('defs');
+        const gradient = svgElement('linearGradient', {
+          id: 'traceGradient',
+          x1: '0%',
+          y1: '0%',
+          x2: '100%',
+          y2: '0%',
+        });
+        append(
+          gradient,
+          svgElement('stop', { offset: '0%', 'stop-color': '#63d6ab' }),
+          svgElement('stop', { offset: '55%', 'stop-color': '#f7ba5d' }),
+          svgElement('stop', { offset: '100%', 'stop-color': '#ff7b67' }),
+        );
+        append(definitions, gradient);
+        append(svg, definitions);
+        [64, 160, 256].forEach((y) => {
+          append(svg, svgElement('line', {
+            class: 'grid-line',
+            x1: 0,
+            y1: y,
+            x2: width,
+            y2: y,
+          }));
+        });
+        append(svg, svgElement('path', { class: 'trace-line', d: path }));
+        points.forEach((point) => {
+          append(svg, svgElement('circle', {
+            class: 'trace-point ' + severityClass(point.label),
+            cx: point.x.toFixed(1),
+            cy: point.y.toFixed(1),
+            r: 7,
+          }));
+        });
+        const startLabel = svgElement('text', {
+          class: 'trace-label',
+          x: start.x.toFixed(1),
+          y: (start.y - 18).toFixed(1),
+        });
+        startLabel.textContent = String(flightData.departure || '');
+        const endLabel = svgElement('text', {
+          class: 'trace-label end',
+          x: end.x.toFixed(1),
+          y: (end.y - 18).toFixed(1),
+        });
+        endLabel.textContent = String(flightData.arrival || '');
+        append(svg, startLabel, endLabel);
+        return svg;
       }
 
       function renderDownloadCard() {
-        return [
-          '<article class="card result-card download-cta">',
-          '<div>',
-          '<span class="metric-label">Next step</span>',
-          '<strong>Want the mobile briefing instead of the web demo?</strong>',
-          '<p>Download the iOS app if the route preview looks useful. The app is the main product surface.</p>',
-          '</div>',
-          '<div class="download-actions">',
-          '<a class="btn btn-primary" href="', escapeHtml(appStoreUrl), '" target="_blank" rel="noreferrer">Download on the App Store</a>',
-          '</div>',
-          '</article>',
-        ].join('');
+        const copy = append(
+          element('div'),
+          element('span', 'metric-label', 'Next step'),
+          element('strong', '', 'Want the mobile briefing instead of the web demo?'),
+          element('p', '', 'Download the iOS app if the route preview looks useful. The app is the main product surface.'),
+        );
+        const link = element('a', 'btn btn-primary', 'Download on the App Store');
+        link.href = appStoreUrl;
+        link.target = '_blank';
+        link.rel = 'noreferrer';
+        return append(
+          element('article', 'card result-card download-cta'),
+          copy,
+          append(element('div', 'download-actions'), link),
+        );
       }
 
       function renderResults(payload) {
@@ -1188,60 +1283,133 @@ function buildClientScript(appStoreUrl: string) {
         const averageShear = waypoints.length ? waypoints.reduce((sum, waypoint) => sum + Number(waypoint.windShear || 0), 0) / waypoints.length : 0;
         const highlights = selectHighlights(waypoints);
         const highlightRows = highlights.map((waypoint) => {
-          const title = Number(waypoint.waypoint) === 0 ? 'Departure segment' : 'Waypoint ' + escapeHtml(String(waypoint.waypoint));
+          const title = Number(waypoint.waypoint) === 0 ? 'Departure segment' : 'Waypoint ' + String(waypoint.waypoint);
           const severity = severityClass(waypoint.label);
-          return [
-            '<div class="highlight">',
-            '<span class="dot ', severity, '" aria-hidden="true"></span>',
-            '<div>',
-            '<div class="highlight-head">',
-            '<span class="highlight-title">', title, '</span>',
-            '<span class="status ', severity, '">', escapeHtml(waypoint.label), ' / ', formatPercent(waypoint.turbulenceScore), '</span>',
-            '</div>',
-            '<p>Wind ', Math.round(Number(waypoint.windSpeed || 0)), ' km/h / Gusts ', Math.round(Number(waypoint.windGusts || 0)), ' km/h / Shear delta ', Number(waypoint.windShear || 0).toFixed(1), ' km/h</p>',
-            '<p>Temp ', Math.round(Number(waypoint.temperature || 0)), ' deg C / CAPE ', Math.round(Number(waypoint.cape || 0)), ' J/kg / EDR ', Number(waypoint.edr || 0).toFixed(2), '</p>',
-            '</div>',
-            '</div>',
-          ].join('');
-        }).join('');
+          const dot = element('span', 'dot ' + severity);
+          dot.setAttribute('aria-hidden', 'true');
+          const heading = append(
+            element('div', 'highlight-head'),
+            element('span', 'highlight-title', title),
+            element('span', 'status ' + severity, String(waypoint.label || '') + ' / ' + formatPercent(waypoint.turbulenceScore)),
+          );
+          const details = append(
+            element('div'),
+            heading,
+            element('p', '', 'Wind ' + Math.round(Number(waypoint.windSpeed || 0)) + ' km/h / Gusts ' + Math.round(Number(waypoint.windGusts || 0)) + ' km/h / Cruise-layer shear ' + Number(waypoint.windShear || 0).toFixed(1) + ' km/h'),
+            element('p', '', 'Temp ' + Math.round(Number(waypoint.temperature || 0)) + ' deg C / CAPE ' + Math.round(Number(waypoint.cape || 0)) + ' J/kg'),
+          );
+          return append(element('div', 'highlight'), dot, details);
+        });
 
-        return [
-          '<article class="card result-card notice-card"><div class="result-title">Live route estimate</div><p>', escapeHtml(payload.notice), '</p></article>',
-          '<article class="card result-card">',
-          '<div class="split-head">',
-          '<div><span class="metric-label">Route brief</span><div class="result-title">', escapeHtml(flightData.flightNumber || 'Unknown route'), '</div><p>', escapeHtml(flightData.airline || 'SkyShake'), '</p></div>',
-          '<span class="status">', escapeHtml(flightData.status || 'live estimate'), '</span>',
-          '</div>',
-          '<div class="route-row">',
-          '<div class="airport"><span class="metric-label">Departure</span><span class="airport-code">', escapeHtml(flightData.departure || '--'), '</span><p class="airport-detail">', escapeHtml((flightData.departureAirport || flightData.departure || '--') + ' / ' + formatTime(flightData.departureTime)), '</p></div>',
-          '<div class="arrow">-></div>',
-          '<div class="airport"><span class="metric-label">Arrival</span><span class="airport-code">', escapeHtml(flightData.arrival || '--'), '</span><p class="airport-detail">', escapeHtml((flightData.arrivalAirport || flightData.arrival || '--') + ' / ' + formatTime(flightData.arrivalTime)), '</p></div>',
-          '</div>',
-          '<div class="metric-grid">',
+        const noticeCard = append(
+          element('article', 'card result-card notice-card'),
+          element('div', 'result-title', 'Live route estimate'),
+          element('p', '', payload.notice || ''),
+        );
+
+        const routeHeading = append(
+          element('div'),
+          element('span', 'metric-label', 'Route brief'),
+          element('div', 'result-title', flightData.flightNumber || 'Unknown route'),
+          element('p', '', flightData.airline || 'SkyShake'),
+        );
+        const routeHeader = append(
+          element('div', 'split-head'),
+          routeHeading,
+          element('span', 'status', flightData.status || 'live estimate'),
+        );
+        const departure = append(
+          element('div', 'airport'),
+          element('span', 'metric-label', 'Departure'),
+          element('span', 'airport-code', flightData.departure || '--'),
+          element('p', 'airport-detail', (flightData.departureAirport || flightData.departure || '--') + ' / ' + formatTime(flightData.departureTime)),
+        );
+        const arrival = append(
+          element('div', 'airport'),
+          element('span', 'metric-label', 'Arrival'),
+          element('span', 'airport-code', flightData.arrival || '--'),
+          element('p', 'airport-detail', (flightData.arrivalAirport || flightData.arrival || '--') + ' / ' + formatTime(flightData.arrivalTime)),
+        );
+        const routeMetrics = append(
+          element('div', 'metric-grid'),
           renderMetric('Departure date', formatDate(flightData.departureTime)),
           renderMetric('Estimated duration', formatDuration(flightData.departureTime, flightData.arrivalTime)),
           renderMetric('Aircraft', flightData.aircraft || 'Aircraft unavailable'),
           renderMetric('Cruise altitude', flightData.altitude ? Math.round(Number(flightData.altitude)).toLocaleString() + ' ft' : 'Altitude unavailable'),
-          '</div>',
-          '</article>',
-          '<article class="card result-card">',
-          '<div class="split-head"><div><span class="metric-label">Overall turbulence outlook</span><div class="result-title">', escapeHtml(report.overallLabel || 'Unknown'), '</div></div><strong>', formatPercent(report.overallScore), '</strong></div>',
-          '<div class="progress"><span style="width:', Math.max(0, Math.min(100, Math.round(Number(report.overallScore || 0) * 100))), '%;"></span></div>',
-          '<div class="metric-grid">',
+        );
+        const routeCard = append(
+          element('article', 'card result-card'),
+          routeHeader,
+          append(element('div', 'route-row'), departure, element('div', 'arrow', '->'), arrival),
+          routeMetrics,
+        );
+
+        const scoreHeader = append(
+          element('div', 'split-head'),
+          append(
+            element('div'),
+            element('span', 'metric-label', 'Overall turbulence outlook'),
+            element('div', 'result-title', report.overallLabel || 'Unknown'),
+          ),
+          element('strong', '', formatPercent(report.overallScore)),
+        );
+        const progress = element('progress', 'progress');
+        progress.max = 100;
+        progress.value = Math.max(0, Math.min(100, Math.round(Number(report.overallScore || 0) * 100)));
+        progress.setAttribute('aria-label', 'Overall route score');
+        const scoreMetrics = append(
+          element('div', 'metric-grid'),
           renderMetric('Average wind', averageWind.toFixed(1) + ' km/h'),
           renderMetric('Peak gusts', peakGust.toFixed(1) + ' km/h'),
           renderMetric('Average shear', averageShear.toFixed(1) + ' km/h'),
           renderMetric('Average score', formatPercent(report.averageScore)),
-          '</div>',
-          '</article>',
-          '<article class="card result-card trace"><div class="section-head"><div><div class="result-title">Route trace</div><p>This keeps the directional story of the flight without turning the landing page into a second product shell.</p></div><span class="metric-label">', escapeHtml(String(report.totalWaypoints || 0)), ' waypoints analysed</span></div>', buildTrace(report, flightData), '</article>',
-          '<article class="card result-card"><div class="section-head"><div><div class="result-title">Route analysis</div><p>These are the most meaningful segments from the live weather run, not every sample point.</p></div></div><div class="highlight-list">', highlightRows || '<p>No waypoint detail was returned for this run.</p>', '</div></article>',
-          renderDownloadCard(),
-        ].join('');
+        );
+        const scoreCard = append(
+          element('article', 'card result-card'),
+          scoreHeader,
+          progress,
+          scoreMetrics,
+        );
+
+        const traceHeader = append(
+          element('div', 'section-head'),
+          append(
+            element('div'),
+            element('div', 'result-title', 'Route trace'),
+            element('p', '', 'This keeps the directional story of the flight without turning the landing page into a second product shell.'),
+          ),
+          element('span', 'metric-label', String(report.totalWaypoints || 0) + ' waypoints analysed'),
+        );
+        const traceCard = append(
+          element('article', 'card result-card trace'),
+          traceHeader,
+          buildTrace(report, flightData),
+        );
+
+        const highlightList = element('div', 'highlight-list');
+        if (highlightRows.length === 0) {
+          append(highlightList, element('p', '', 'No waypoint detail was returned for this run.'));
+        } else {
+          highlightRows.forEach((row) => append(highlightList, row));
+        }
+        const analysisCard = append(
+          element('article', 'card result-card'),
+          append(
+            element('div', 'section-head'),
+            append(
+              element('div'),
+              element('div', 'result-title', 'Route analysis'),
+              element('p', '', 'These are the most meaningful segments from the live weather run, not every sample point.'),
+            ),
+          ),
+          highlightList,
+        );
+
+        return [noticeCard, routeCard, scoreCard, traceCard, analysisCard, renderDownloadCard()];
       }
 
       function clearResults() {
-        results.innerHTML = '';
+        results.replaceChildren();
         results.setAttribute('data-state', 'idle');
       }
 
@@ -1272,6 +1440,10 @@ function buildClientScript(appStoreUrl: string) {
 
       form.addEventListener('submit', async (event) => {
         event.preventDefault();
+        if (isSubmitting) {
+          return;
+        }
+
         normalizeInputs();
         clearError();
 
@@ -1291,10 +1463,11 @@ function buildClientScript(appStoreUrl: string) {
           return;
         }
 
+        isSubmitting = true;
         setLoading(true);
 
         try {
-          const response = await fetch('/v1/route-analysis/airports', {
+          const response = await fetch('/v1/public/route-analysis/airports', {
             method: 'POST',
             headers: {
               Accept: 'application/json',
@@ -1308,13 +1481,14 @@ function buildClientScript(appStoreUrl: string) {
             throw new Error(payload && payload.error ? payload.error : 'The route check failed before it returned usable data.');
           }
 
-          results.innerHTML = renderResults(payload);
+          results.replaceChildren(...renderResults(payload));
           results.setAttribute('data-state', 'loaded');
           results.scrollIntoView({ behavior: 'smooth', block: 'start' });
         } catch (error) {
           clearResults();
           showError(error instanceof Error ? error.message : 'The route check failed unexpectedly.');
         } finally {
+          isSubmitting = false;
           setLoading(false);
         }
       });

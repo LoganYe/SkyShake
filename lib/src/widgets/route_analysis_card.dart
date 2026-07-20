@@ -116,7 +116,7 @@ class _WaypointTile extends StatelessWidget {
               ),
               const SizedBox(height: 4),
               Text(
-                'Temp ${waypoint.temperature.round()}°C · CAPE ${waypoint.cape.round()} J/kg · EDR ${waypoint.edr.toStringAsFixed(2)}',
+                'Temp ${waypoint.temperature.round()}°C · CAPE ${waypoint.cape.round()} J/kg · Cruise-layer shear ${waypoint.windShear.round()} km/h',
               ),
             ],
           ),

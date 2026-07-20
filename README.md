@@ -24,8 +24,9 @@ secrets, rate limits, billing controls, or request normalization.
 
 - The landing page at `/` is served directly from the Node backend and can run
   a live route check without a Flutter web build.
-- Route turbulence analysis by airport pair is live, because the backend fetches
-  real Open-Meteo weather data for each waypoint.
+- Route risk analysis by airport pair is live. The backend selects Open-Meteo
+  hourly forecasts at each waypoint's estimated time, including surface
+  weather, CAPE, and 300/250/200 hPa cruise-layer winds.
 - Flight-number lookup is exposed in the Flutter UI and backed by
   `GET /v1/flights/search` on the backend. It is only live when
   `FLIGHT_PROVIDER=aerodatabox` and `AERODATABOX_API_KEY` are configured.
@@ -33,9 +34,12 @@ secrets, rate limits, billing controls, or request normalization.
   fails, SkyShake returns an error instead of inventing data.
 - Live location and schedule fields are still provider-dependent. Some flights
   return schedule-only data or partial airport timing data.
-- Repeated identical flight lookups are cached in-memory inside the backend process:
+- Repeated identical flight lookups are cached:
   - successful results: 60 seconds
   - not-found results: 30 seconds
+  - all provider caches are capped at 1,000 least-recently-used entries
+    during single-process development
+  - production uses Redis so completed cache entries are shared across instances
 - Flight lookup responses carry safe diagnostics:
   - provider name
   - `live` vs `cache` source
@@ -51,6 +55,8 @@ secrets, rate limits, billing controls, or request normalization.
 - `backend/`: Node/TypeScript backend service and deployable landing page
 - `test/`: Flutter tests
 - `web/`: Flutter web shell
+- `shared/airport-catalog.json`: the hand-edited airport catalog source
+- `tool/generate-airport-catalog.mjs`: deterministic TypeScript/Dart catalog generator
 
 ## Mobile Shell
 
@@ -115,6 +121,9 @@ AERODATABOX_API_KEY=your-key-here
 AERODATABOX_ENABLE_FLIGHT_PLAN=false
 ```
 
+Local development defaults to process-memory caches and disables App Attest,
+because iOS simulators cannot produce Apple attestations.
+
 `APP_STORE_URL` drives the landing page's primary CTA. If it is omitted, the
 landing page falls back to an App Store search URL for `SkyShake` instead of
 pretending a listing URL is known.
@@ -137,6 +146,20 @@ For web debugging:
 ```bash
 flutter run -d chrome -t lib/main_dev.dart --dart-define=BACKEND_BASE_URL=http://127.0.0.1:8787
 ```
+
+Flutter web opens the application shell for debugging. The backend owns the
+deployable marketing/demo landing page at `/`; there is no second Flutter
+landing implementation to keep in sync.
+
+When changing the supported airport list, edit only
+`shared/airport-catalog.json`, then regenerate both compiled catalogs:
+
+```bash
+cd backend
+npm run generate:airports
+```
+
+Backend tests and builds fail if either generated file drifts from that source.
 
 The Flutter web app talks to the backend over HTTP from a different local
 origin. If you see `Could not reach the backend...`, that usually means one of
@@ -163,6 +186,50 @@ In the app:
 - `127.0.0.1` is a simulator/dev convenience, not a viable production mobile
   backend target.
 
+## Backend Operational Controls
+
+- Provider-backed API routes default to 30 requests per 60 seconds. Configure
+  this with `PROVIDER_RATE_LIMIT_MAX` and `PROVIDER_RATE_LIMIT_WINDOW_MS`.
+- Production (`NODE_ENV=production`) requires `REDIS_URL`; rate counters and
+  completed provider cache entries are shared across instances. Development
+  and tests retain bounded process-memory stores.
+- Production also requires Apple App Attest configuration:
+  `APPLE_TEAM_ID`, `IOS_BUNDLE_ID`, and
+  `APP_ATTEST_ALLOW_DEVELOPMENT=false`. `APP_ATTEST_MODE` must be `required`
+  (and defaults to it in production).
+- The Flutter production client registers an Apple-attested app-instance key
+  and binds a fresh assertion to every protected request. Challenges are
+  single-use and assertion counters are updated atomically in Redis.
+- App Attest proves app-instance integrity; it is not a user account or a
+  human identity system. A static key embedded in Flutter would not provide
+  this protection and is intentionally not used.
+- The landing page route preview uses the narrower anonymous
+  `/v1/public/route-analysis/airports` endpoint. Flight endpoints and mobile
+  route endpoints require App Attest in production.
+- `TRUST_PROXY_HOPS` defaults to `0`. Set it only to the exact trusted proxy hop
+  count used by the deployment; incorrect proxy trust makes IP-based limits
+  inaccurate or spoofable.
+- Browser CORS requests are accepted from localhost development origins and
+  origins explicitly listed in `CORS_ALLOWED_ORIGINS`. Native mobile requests
+  and same-origin landing-page requests do not require CORS.
+- Route analysis has an 18-second total processing deadline by default,
+  configured with `ROUTE_ANALYSIS_TIMEOUT_MS`. The deadline cancels already
+  active Open-Meteo fetches; individual provider requests also have bounded
+  lifetimes.
+- Structured backend logging defaults to `LOG_LEVEL=info`. Expected provider
+  failures log sanitized status/code/provider metadata; authorization and
+  cookie headers are redacted.
+- The backend landing response uses a per-request nonce CSP, avoids dynamic
+  HTML parsing sinks, and sends nosniff, frame, referrer, and permissions
+  headers.
+
+Production deployment requires the Apple App Attest capability for team
+`595KFFGG66` and bundle `com.skyshake.app`, plus provisioning profiles that
+carry the matching entitlement. Debug builds use the development App Attest
+environment; Release/Profile use production. A physical iOS device is needed
+for development attestation, and TestFlight/App Store distribution is needed
+to validate the production AAGUID end to end.
+
 ## Validation
 
 Frontend:
@@ -181,19 +248,33 @@ Backend:
 cd backend
 npm test
 npm run build
+npm audit --omit=dev
+```
+
+An optional real-Redis integration test verifies cross-instance rate limits,
+caches, challenge consumption, and assertion counters:
+
+```bash
+REDIS_TEST_URL=redis://127.0.0.1:6379/0 npm test -- --run test/redis-integration.test.ts
 ```
 
 ## Critical Notes
 
-- “Real data” still does **not** mean “ground truth turbulence.” The weather is
-  real; the turbulence score is still SkyShake’s model.
+- “Real data” still does **not** mean “ground truth turbulence.” The response is
+  explicitly `weather-proxy` version 2 and non-operational. It uses
+  time-aligned forecast weather and cruise-level wind shear, but it has not
+  been scientifically calibrated against aviation EDR or PIREPs.
+- SkyShake no longer emits a fabricated EDR value. Operational turbulence
+  guidance requires an aviation-grade data source and an external validation
+  program; unit tests and disclaimers cannot create that evidence.
 - AeroDataBox is used here as a cost-sensitive provider, not as an operational
   aviation-grade source of truth.
 - AeroDataBox responses can be partial. Missing live position, incomplete
   timing, or schedule-only payloads are expected failure modes, not rare edge
   cases.
-- The backend cache is local to a single process. It reduces duplicate upstream
-  calls and rate-limit pressure, but it is not a shared or durable cache.
+- Redis is operationally required in production. An unavailable Redis instance
+  fails closed for rate limits and attestation instead of silently weakening
+  enforcement to process-local state.
 - Flutter web local debugging depends on the backend staying reachable from the
   browser. A dead local API process and missing CORS headers fail in nearly the
   same way from the frontend’s perspective.

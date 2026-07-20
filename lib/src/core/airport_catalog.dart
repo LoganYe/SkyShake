@@ -1,3 +1,4 @@
+// GENERATED FILE. Edit shared/airport-catalog.json, then run npm run generate:airports.
 class AirportRecord {
   const AirportRecord({
     required this.code,
@@ -28,7 +29,7 @@ class AirportCatalog {
     ),
     'ORD': AirportRecord(
       code: 'ORD',
-      name: "Chicago O'Hare",
+      name: 'Chicago O\'Hare',
       latitude: 41.9742,
       longitude: -87.9073,
     ),
@@ -54,7 +55,7 @@ class AirportCatalog {
       code: 'SFO',
       name: 'San Francisco International',
       latitude: 37.6213,
-      longitude: -122.3790,
+      longitude: -122.379,
     ),
     'SEA': AirportRecord(
       code: 'SEA',
@@ -65,7 +66,7 @@ class AirportCatalog {
     'LAS': AirportRecord(
       code: 'LAS',
       name: 'Las Vegas McCarran',
-      latitude: 36.0840,
+      latitude: 36.084,
       longitude: -115.1537,
     ),
     'MCO': AirportRecord(
@@ -108,7 +109,7 @@ class AirportCatalog {
       code: 'LGA',
       name: 'New York LaGuardia',
       latitude: 40.7769,
-      longitude: -73.8740,
+      longitude: -73.874,
     ),
     'PHX': AirportRecord(
       code: 'PHX',
@@ -126,12 +127,12 @@ class AirportCatalog {
       code: 'MIA',
       name: 'Miami International',
       latitude: 25.7959,
-      longitude: -80.2870,
+      longitude: -80.287,
     ),
     'CLT': AirportRecord(
       code: 'CLT',
       name: 'Charlotte Douglas',
-      latitude: 35.2140,
+      latitude: 35.214,
       longitude: -80.9431,
     ),
     'SAN': AirportRecord(
@@ -173,7 +174,7 @@ class AirportCatalog {
     'LHR': AirportRecord(
       code: 'LHR',
       name: 'London Heathrow',
-      latitude: 51.4700,
+      latitude: 51.47,
       longitude: -0.4543,
     ),
     'CDG': AirportRecord(
@@ -216,7 +217,7 @@ class AirportCatalog {
       code: 'MUC',
       name: 'Munich Airport',
       latitude: 48.3537,
-      longitude: 11.7750,
+      longitude: 11.775,
     ),
     'LGW': AirportRecord(
       code: 'LGW',
@@ -245,7 +246,7 @@ class AirportCatalog {
     'CPH': AirportRecord(
       code: 'CPH',
       name: 'Copenhagen Airport',
-      latitude: 55.6180,
+      latitude: 55.618,
       longitude: 12.6508,
     ),
     'OSL': AirportRecord(
@@ -270,12 +271,12 @@ class AirportCatalog {
       code: 'MAN',
       name: 'Manchester Airport',
       latitude: 53.3537,
-      longitude: -2.2750,
+      longitude: -2.275,
     ),
     'EDI': AirportRecord(
       code: 'EDI',
       name: 'Edinburgh Airport',
-      latitude: 55.9500,
+      latitude: 55.95,
       longitude: -3.3725,
     ),
     'LIS': AirportRecord(
@@ -293,7 +294,7 @@ class AirportCatalog {
     'BRU': AirportRecord(
       code: 'BRU',
       name: 'Brussels Airport',
-      latitude: 50.9010,
+      latitude: 50.901,
       longitude: 4.4856,
     ),
     'PRG': AirportRecord(
@@ -329,7 +330,7 @@ class AirportCatalog {
     'NAP': AirportRecord(
       code: 'NAP',
       name: 'Naples International',
-      latitude: 40.8860,
+      latitude: 40.886,
       longitude: 14.2908,
     ),
     'HND': AirportRecord(
@@ -341,7 +342,7 @@ class AirportCatalog {
     'NRT': AirportRecord(
       code: 'NRT',
       name: 'Tokyo Narita',
-      latitude: 35.7720,
+      latitude: 35.772,
       longitude: 140.3929,
     ),
     'PEK': AirportRecord(
@@ -359,7 +360,7 @@ class AirportCatalog {
     'HKG': AirportRecord(
       code: 'HKG',
       name: 'Hong Kong International',
-      latitude: 22.3080,
+      latitude: 22.308,
       longitude: 113.9185,
     ),
     'SIN': AirportRecord(
@@ -377,7 +378,7 @@ class AirportCatalog {
     'BKK': AirportRecord(
       code: 'BKK',
       name: 'Bangkok Suvarnabhumi',
-      latitude: 13.6900,
+      latitude: 13.69,
       longitude: 100.7501,
     ),
     'KUL': AirportRecord(
@@ -390,7 +391,7 @@ class AirportCatalog {
       code: 'DEL',
       name: 'Delhi Indira Gandhi',
       latitude: 28.5562,
-      longitude: 77.1000,
+      longitude: 77.1,
     ),
     'BOM': AirportRecord(
       code: 'BOM',
@@ -407,14 +408,14 @@ class AirportCatalog {
     'MEL': AirportRecord(
       code: 'MEL',
       name: 'Melbourne Airport',
-      latitude: -37.6690,
-      longitude: 144.8410,
+      latitude: -37.669,
+      longitude: 144.841,
     ),
     'AKL': AirportRecord(
       code: 'AKL',
       name: 'Auckland Airport',
       latitude: -37.0082,
-      longitude: 174.7850,
+      longitude: 174.785,
     ),
     'MNL': AirportRecord(
       code: 'MNL',
@@ -456,12 +457,12 @@ class AirportCatalog {
       code: 'DOH',
       name: 'Doha Hamad International',
       latitude: 25.2731,
-      longitude: 51.6080,
+      longitude: 51.608,
     ),
     'AUH': AirportRecord(
       code: 'AUH',
       name: 'Abu Dhabi International',
-      latitude: 24.4330,
+      latitude: 24.433,
       longitude: 54.6511,
     ),
     'CAI': AirportRecord(
@@ -491,7 +492,7 @@ class AirportCatalog {
     'SCL': AirportRecord(
       code: 'SCL',
       name: 'Santiago International',
-      latitude: -33.3930,
+      latitude: -33.393,
       longitude: -70.7858,
     ),
     'BOG': AirportRecord(
@@ -516,7 +517,7 @@ class AirportCatalog {
       code: 'JNB',
       name: 'Johannesburg OR Tambo',
       latitude: -26.1392,
-      longitude: 28.2460,
+      longitude: 28.246,
     ),
     'CPT': AirportRecord(
       code: 'CPT',

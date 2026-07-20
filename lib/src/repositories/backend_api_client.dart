@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
 import '../core/app_config.dart';
+import 'app_attest_authorizer.dart';
 import 'tracking_repository.dart';
 
 class ApiPayloadResponse {
@@ -23,47 +24,73 @@ abstract interface class BackendApiClient {
 }
 
 class DioBackendApiClient implements BackendApiClient {
-  DioBackendApiClient(this.config, {Dio? dio})
-    : _dio =
-          dio ??
-          Dio(
-            BaseOptions(
-              baseUrl: config.backendBaseUrl,
-              headers: const {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json',
-              },
-              connectTimeout: const Duration(seconds: 10),
-              receiveTimeout: const Duration(seconds: 20),
-              sendTimeout: const Duration(seconds: 10),
-              responseType: ResponseType.json,
-              validateStatus: (_) => true,
-            ),
-          );
+  DioBackendApiClient(
+    this.config, {
+    Dio? dio,
+    RequestAuthorizer? authorizer,
+    AppAttestPlatform appAttestPlatform =
+        const MethodChannelAppAttestPlatform(),
+  }) : _dio = dio ?? _buildDio(config) {
+    _authorizer =
+        authorizer ??
+        (config.environment == AppEnvironment.production
+            ? AppAttestRequestAuthorizer(_dio, platform: appAttestPlatform)
+            : null);
+  }
 
   final AppConfig config;
   final Dio _dio;
+  late final RequestAuthorizer? _authorizer;
 
   @override
   Future<ApiPayloadResponse> getJson(
     String path, {
     Map<String, dynamic>? queryParameters,
   }) async {
+    final query = queryParameters ?? const <String, dynamic>{};
     return _performRequest(
-      () => _dio.get<dynamic>(path, queryParameters: queryParameters),
+      () async => _dio.get<dynamic>(
+        path,
+        queryParameters: query,
+        options: Options(
+          headers: await _authorizationHeaders(
+            method: 'GET',
+            path: path,
+            query: query,
+            body: null,
+          ),
+        ),
+      ),
     );
   }
 
   @override
   Future<ApiPayloadResponse> postJson(String path, {Object? body}) async {
-    return _performRequest(() => _dio.post<dynamic>(path, data: body));
+    return _performRequest(
+      () async => _dio.post<dynamic>(
+        path,
+        data: body,
+        options: Options(
+          headers: await _authorizationHeaders(
+            method: 'POST',
+            path: path,
+            query: const {},
+            body: body,
+          ),
+        ),
+      ),
+    );
   }
 
   Future<ApiPayloadResponse> _performRequest(
     Future<Response<dynamic>> Function() operation,
   ) async {
     try {
-      final response = await operation();
+      var response = await operation();
+      if (_isInvalidAttestation(response) && _authorizer != null) {
+        await _authorizer.invalidate();
+        response = await operation();
+      }
       return ApiPayloadResponse(
         statusCode: response.statusCode ?? 500,
         payload: _coerceJsonMap(response.data),
@@ -71,6 +98,32 @@ class DioBackendApiClient implements BackendApiClient {
     } on DioException catch (error) {
       throw _mapDioException(error);
     }
+  }
+
+  Future<Map<String, String>?> _authorizationHeaders({
+    required String method,
+    required String path,
+    required Map<String, dynamic> query,
+    required Object? body,
+  }) {
+    final authorizer = _authorizer;
+    if (authorizer == null) {
+      return Future.value(null);
+    }
+    return authorizer.authorize(
+      method: method,
+      path: path,
+      query: query,
+      body: body,
+    );
+  }
+
+  bool _isInvalidAttestation(Response<dynamic> response) {
+    if (response.statusCode != 401) {
+      return false;
+    }
+    final payload = _coerceJsonMap(response.data);
+    return payload['code'] == 'app_attestation_invalid';
   }
 
   Map<String, dynamic> _coerceJsonMap(dynamic data) {
@@ -140,4 +193,21 @@ class DioBackendApiClient implements BackendApiClient {
 
     return baseMessage;
   }
+}
+
+Dio _buildDio(AppConfig config) {
+  return Dio(
+    BaseOptions(
+      baseUrl: config.backendBaseUrl,
+      headers: const {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      connectTimeout: const Duration(seconds: 10),
+      receiveTimeout: const Duration(seconds: 20),
+      sendTimeout: const Duration(seconds: 10),
+      responseType: ResponseType.json,
+      validateStatus: (_) => true,
+    ),
+  );
 }

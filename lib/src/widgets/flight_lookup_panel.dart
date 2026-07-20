@@ -57,7 +57,7 @@ class FlightLookupPanel extends StatelessWidget {
                       labelText: 'Flight number',
                       hintText: 'UA857',
                     ),
-                    onSubmitted: (_) => onSearch(),
+                    onSubmitted: isLoading ? null : (_) => onSearch(),
                   ),
                   const SizedBox(height: 12),
                   Row(
@@ -120,7 +120,7 @@ class FlightLookupPanel extends StatelessWidget {
                             labelText: 'Flight number',
                             hintText: 'UA857',
                           ),
-                          onSubmitted: (_) => onSearch(),
+                          onSubmitted: isLoading ? null : (_) => onSearch(),
                         ),
                       ),
                       OutlinedButton.icon(
@@ -151,9 +151,7 @@ class FlightLookupPanel extends StatelessWidget {
                                 )
                                 : const Icon(Icons.flight_takeoff),
                             const SizedBox(width: 8),
-                            Text(
-                              isLoading ? 'Finding flight…' : 'Find flight',
-                            ),
+                            Text(isLoading ? 'Finding flight…' : 'Find flight'),
                           ],
                         ),
                       ),
