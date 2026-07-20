@@ -19,8 +19,7 @@ class RouteTabScreen extends StatelessWidget {
       builder: (context, draftStore, analysisStore, _) {
         return MobileContentView(
           title: 'Check a route',
-          subtitle:
-              'Use two airports when you do not have a flight number.',
+          subtitle: 'Use two airports when you do not have a flight number.',
           children: [
             if (draftStore.sourceFlightNumber != null)
               _RoutePrefillCard(

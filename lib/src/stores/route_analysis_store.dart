@@ -13,6 +13,10 @@ class RouteAnalysisStore extends ChangeNotifier {
   bool isLoading = false;
 
   Future<RouteAnalysisResult?> runAnalysis(RouteDraftStore draft) async {
+    if (isLoading) {
+      return null;
+    }
+
     FocusManager.instance.primaryFocus?.unfocus();
 
     isLoading = true;

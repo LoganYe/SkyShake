@@ -12,17 +12,32 @@ export interface WeatherSnapshot {
   windShear: number;
   temperature: number;
   cloudCover: number;
-  upperWind80: number;
-  upperWind120: number;
+  cape: number;
+  cruiseWindSpeed: number;
 }
 
 export interface WeatherProvider {
-  fetchSnapshot(latitude: number, longitude: number): Promise<WeatherSnapshot>;
+  fetchSnapshot(
+    latitude: number,
+    longitude: number,
+    options?: WeatherRequestOptions,
+  ): Promise<WeatherSnapshot>;
+}
+
+export interface WeatherRequestOptions {
+  signal?: AbortSignal;
+  forecastTime?: Date;
+  cruiseAltitudeFeet?: number;
+}
+
+interface RouteAnalysisOptions {
+  signal?: AbortSignal;
 }
 
 export async function analyzeRouteWithWeather(
   request: RouteAnalysisRequest,
   weatherProvider: WeatherProvider,
+  options: RouteAnalysisOptions = {},
 ): Promise<RouteAnalysisResponsePayload> {
   const distance = distanceKm(request);
   const points = createGreatCirclePoints(request, segmentCount(distance));
@@ -31,16 +46,27 @@ export async function analyzeRouteWithWeather(
     departureTime.getTime() +
       estimateDurationMinutes(distance, request.aircraftType) * 60 * 1000,
   );
+  const cruiseAltitudeFeet = cruiseAltitudeFor(request.aircraftType);
 
   const weatherSamples = await mapWithConcurrency(
     points,
     3,
-    (point) => weatherProvider.fetchSnapshot(point.latitude, point.longitude),
+    (point, index) =>
+      weatherProvider.fetchSnapshot(point.latitude, point.longitude, {
+        signal: options.signal,
+        forecastTime: interpolateDate(
+          departureTime,
+          arrivalTime,
+          points.length <= 1 ? 0 : index / (points.length - 1),
+        ),
+        cruiseAltitudeFeet,
+      }),
+    options.signal,
   );
 
   const waypoints: TurbulenceWaypointPayload[] = points.map((point, index) => {
     const weather = weatherSamples[index];
-    const score = scoreTurbulence(weather, request.aircraftType, index);
+    const score = scoreTurbulence(weather, request.aircraftType);
     return {
       waypoint: index,
       latitude: point.latitude,
@@ -52,8 +78,7 @@ export async function analyzeRouteWithWeather(
       windShear: weather.windShear,
       temperature: weather.temperature,
       cloudCover: weather.cloudCover,
-      cape: estimateCape(weather),
-      edr: clamp(score * 0.72, 0.05, 0.7),
+      cape: weather.cape,
     };
   });
 
@@ -78,7 +103,7 @@ export async function analyzeRouteWithWeather(
     status: 'live weather estimate',
     latitude: (request.departure.latitude + request.arrival.latitude) / 2,
     longitude: (request.departure.longitude + request.arrival.longitude) / 2,
-    altitude: cruiseAltitudeFor(request.aircraftType),
+    altitude: cruiseAltitudeFeet,
     velocity: cruiseSpeedFor(request.aircraftType),
     isMockData: false,
     error: null,
@@ -86,8 +111,14 @@ export async function analyzeRouteWithWeather(
 
   return {
     notice:
-      'Server-side route estimate using live public weather data. Flight schedule ' +
-      'validation is separate from this endpoint and is not inferred here.',
+      'Experimental turbulence-risk screening from time-aligned public surface, ' +
+      'convective, and cruise-level wind forecasts. This is not EDR, a ' +
+      'flight-specific forecast, or operational aviation guidance.',
+    model: {
+      name: 'weather-proxy',
+      version: 2,
+      operationalUse: false,
+    },
     flightData,
     report: {
       overallScore,
@@ -102,37 +133,25 @@ export async function analyzeRouteWithWeather(
 export function scoreTurbulence(
   weather: WeatherSnapshot,
   aircraftType: string,
-  waypointIndex: number,
 ) {
   const gustFactor = normalize(weather.windGusts - weather.windSpeed, 0, 40);
-  const shearFactor = normalize(weather.windShear, 0, 30);
-  const upperWindFactor = normalize(weather.upperWind120, 30, 140);
+  const shearFactor = normalize(weather.windShear, 0, 80);
+  const cruiseWindFactor = normalize(weather.cruiseWindSpeed, 50, 250);
   const cloudFactor = normalize(weather.cloudCover, 15, 100);
-  const convectiveFactor = normalize(estimateCape(weather), 0, 1800);
-  const variabilityFactor =
-    Math.sin(waypointIndex * 0.7 + weather.temperature * 0.09) * 0.08;
+  const convectiveFactor = normalize(weather.cape, 0, 1800);
   const aircraftFactor = aircraftSensitivity(aircraftType);
 
   return clamp(
-    0.1 +
-      gustFactor * 0.22 +
-      shearFactor * 0.24 +
-      upperWindFactor * 0.18 +
-      cloudFactor * 0.1 +
-      convectiveFactor * 0.08 +
-      Math.abs(variabilityFactor) +
+    0.08 +
+      gustFactor * 0.18 +
+      shearFactor * 0.27 +
+      cruiseWindFactor * 0.15 +
+      cloudFactor * 0.05 +
+      convectiveFactor * 0.18 +
       aircraftFactor,
     0.06,
     0.92,
   );
-}
-
-export function estimateCape(weather: WeatherSnapshot) {
-  const convectiveIndex =
-    Math.max(0, weather.temperature - 2) * 12 +
-    Math.max(0, weather.cloudCover - 45) * 6 +
-    Math.max(0, weather.windGusts - 45) * 10;
-  return clamp(convectiveIndex, 0, 2200);
 }
 
 function aircraftSensitivity(aircraftType: string) {
@@ -228,10 +247,17 @@ function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
 }
 
+function interpolateDate(start: Date, end: Date, fraction: number) {
+  return new Date(
+    start.getTime() + (end.getTime() - start.getTime()) * fraction,
+  );
+}
+
 async function mapWithConcurrency<TInput, TOutput>(
   items: readonly TInput[],
   concurrency: number,
   mapper: (item: TInput, index: number) => Promise<TOutput>,
+  signal?: AbortSignal,
 ) {
   const limit = Math.max(1, Math.min(concurrency, items.length));
   const results = new Array<TOutput>(items.length);
@@ -240,6 +266,10 @@ async function mapWithConcurrency<TInput, TOutput>(
   await Promise.all(
     Array.from({ length: limit }, async () => {
       while (nextIndex < items.length) {
+        if (signal?.aborted) {
+          throw signal.reason;
+        }
+
         const currentIndex = nextIndex;
         nextIndex += 1;
         results[currentIndex] = await mapper(items[currentIndex], currentIndex);

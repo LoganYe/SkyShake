@@ -1,536 +1,540 @@
+// GENERATED FILE. Edit shared/airport-catalog.json, then run npm run generate:airports.
 export interface AirportRecord {
-  code: string;
-  name: string;
-  latitude: number;
-  longitude: number;
+  readonly code: string;
+  readonly name: string;
+  readonly latitude: number;
+  readonly longitude: number;
 }
 
-export const airportCatalog: Record<string, AirportRecord> = {
-  ATL: {
-    code: 'ATL',
-    name: 'Atlanta Hartsfield-Jackson',
+export const airportList: readonly AirportRecord[] = [
+  {
+    code: "ATL",
+    name: "Atlanta Hartsfield-Jackson",
     latitude: 33.6407,
     longitude: -84.4277,
   },
-  LAX: {
-    code: 'LAX',
-    name: 'Los Angeles International',
+  {
+    code: "LAX",
+    name: "Los Angeles International",
     latitude: 33.9416,
     longitude: -118.4085,
   },
-  ORD: {
-    code: 'ORD',
+  {
+    code: "ORD",
     name: "Chicago O'Hare",
     latitude: 41.9742,
     longitude: -87.9073,
   },
-  DFW: {
-    code: 'DFW',
-    name: 'Dallas/Fort Worth',
+  {
+    code: "DFW",
+    name: "Dallas/Fort Worth",
     latitude: 32.8998,
     longitude: -97.0403,
   },
-  DEN: {
-    code: 'DEN',
-    name: 'Denver International',
+  {
+    code: "DEN",
+    name: "Denver International",
     latitude: 39.8561,
     longitude: -104.6737,
   },
-  JFK: {
-    code: 'JFK',
-    name: 'New York JFK',
+  {
+    code: "JFK",
+    name: "New York JFK",
     latitude: 40.6413,
     longitude: -73.7781,
   },
-  SFO: {
-    code: 'SFO',
-    name: 'San Francisco International',
+  {
+    code: "SFO",
+    name: "San Francisco International",
     latitude: 37.6213,
     longitude: -122.379,
   },
-  SEA: {
-    code: 'SEA',
-    name: 'Seattle-Tacoma',
+  {
+    code: "SEA",
+    name: "Seattle-Tacoma",
     latitude: 47.4502,
     longitude: -122.3088,
   },
-  LAS: {
-    code: 'LAS',
-    name: 'Las Vegas McCarran',
+  {
+    code: "LAS",
+    name: "Las Vegas McCarran",
     latitude: 36.084,
     longitude: -115.1537,
   },
-  MCO: {
-    code: 'MCO',
-    name: 'Orlando International',
+  {
+    code: "MCO",
+    name: "Orlando International",
     latitude: 28.4312,
     longitude: -81.3081,
   },
-  EWR: {
-    code: 'EWR',
-    name: 'Newark Liberty',
+  {
+    code: "EWR",
+    name: "Newark Liberty",
     latitude: 40.6895,
     longitude: -74.1745,
   },
-  MSP: {
-    code: 'MSP',
-    name: 'Minneapolis-St. Paul',
+  {
+    code: "MSP",
+    name: "Minneapolis-St. Paul",
     latitude: 44.8848,
     longitude: -93.2223,
   },
-  BOS: {
-    code: 'BOS',
-    name: 'Boston Logan',
+  {
+    code: "BOS",
+    name: "Boston Logan",
     latitude: 42.3656,
     longitude: -71.0096,
   },
-  DTW: {
-    code: 'DTW',
-    name: 'Detroit Metropolitan',
+  {
+    code: "DTW",
+    name: "Detroit Metropolitan",
     latitude: 42.2125,
     longitude: -83.3534,
   },
-  PHL: {
-    code: 'PHL',
-    name: 'Philadelphia International',
+  {
+    code: "PHL",
+    name: "Philadelphia International",
     latitude: 39.8729,
     longitude: -75.2437,
   },
-  LGA: {
-    code: 'LGA',
-    name: 'New York LaGuardia',
+  {
+    code: "LGA",
+    name: "New York LaGuardia",
     latitude: 40.7769,
     longitude: -73.874,
   },
-  PHX: {
-    code: 'PHX',
-    name: 'Phoenix Sky Harbor',
+  {
+    code: "PHX",
+    name: "Phoenix Sky Harbor",
     latitude: 33.4352,
     longitude: -112.0101,
   },
-  IAH: {
-    code: 'IAH',
-    name: 'Houston George Bush',
+  {
+    code: "IAH",
+    name: "Houston George Bush",
     latitude: 29.9902,
     longitude: -95.3368,
   },
-  MIA: {
-    code: 'MIA',
-    name: 'Miami International',
+  {
+    code: "MIA",
+    name: "Miami International",
     latitude: 25.7959,
     longitude: -80.287,
   },
-  CLT: {
-    code: 'CLT',
-    name: 'Charlotte Douglas',
+  {
+    code: "CLT",
+    name: "Charlotte Douglas",
     latitude: 35.214,
     longitude: -80.9431,
   },
-  SAN: {
-    code: 'SAN',
-    name: 'San Diego International',
+  {
+    code: "SAN",
+    name: "San Diego International",
     latitude: 32.7338,
     longitude: -117.1933,
   },
-  PDX: {
-    code: 'PDX',
-    name: 'Portland International',
+  {
+    code: "PDX",
+    name: "Portland International",
     latitude: 45.5898,
     longitude: -122.5951,
   },
-  YYZ: {
-    code: 'YYZ',
-    name: 'Toronto Pearson',
+  {
+    code: "YYZ",
+    name: "Toronto Pearson",
     latitude: 43.6777,
     longitude: -79.6248,
   },
-  YVR: {
-    code: 'YVR',
-    name: 'Vancouver International',
+  {
+    code: "YVR",
+    name: "Vancouver International",
     latitude: 49.1939,
     longitude: -123.1844,
   },
-  YUL: {
-    code: 'YUL',
-    name: 'Montreal-Trudeau',
+  {
+    code: "YUL",
+    name: "Montreal-Trudeau",
     latitude: 45.4657,
     longitude: -73.7448,
   },
-  MEX: {
-    code: 'MEX',
-    name: 'Mexico City International',
+  {
+    code: "MEX",
+    name: "Mexico City International",
     latitude: 19.4363,
     longitude: -99.0721,
   },
-  LHR: {
-    code: 'LHR',
-    name: 'London Heathrow',
+  {
+    code: "LHR",
+    name: "London Heathrow",
     latitude: 51.47,
     longitude: -0.4543,
   },
-  CDG: {
-    code: 'CDG',
-    name: 'Paris Charles de Gaulle',
+  {
+    code: "CDG",
+    name: "Paris Charles de Gaulle",
     latitude: 49.0097,
     longitude: 2.5479,
   },
-  AMS: {
-    code: 'AMS',
-    name: 'Amsterdam Schiphol',
+  {
+    code: "AMS",
+    name: "Amsterdam Schiphol",
     latitude: 52.3105,
     longitude: 4.7683,
   },
-  FRA: {
-    code: 'FRA',
-    name: 'Frankfurt Airport',
+  {
+    code: "FRA",
+    name: "Frankfurt Airport",
     latitude: 50.0379,
     longitude: 8.5622,
   },
-  MAD: {
-    code: 'MAD',
-    name: 'Madrid-Barajas',
+  {
+    code: "MAD",
+    name: "Madrid-Barajas",
     latitude: 40.4983,
     longitude: -3.5676,
   },
-  BCN: {
-    code: 'BCN',
-    name: 'Barcelona-El Prat',
+  {
+    code: "BCN",
+    name: "Barcelona-El Prat",
     latitude: 41.2974,
     longitude: 2.0833,
   },
-  FCO: {
-    code: 'FCO',
-    name: 'Rome Fiumicino',
+  {
+    code: "FCO",
+    name: "Rome Fiumicino",
     latitude: 41.8003,
     longitude: 12.2389,
   },
-  MUC: {
-    code: 'MUC',
-    name: 'Munich Airport',
+  {
+    code: "MUC",
+    name: "Munich Airport",
     latitude: 48.3537,
     longitude: 11.775,
   },
-  LGW: {
-    code: 'LGW',
-    name: 'London Gatwick',
+  {
+    code: "LGW",
+    name: "London Gatwick",
     latitude: 51.1537,
     longitude: -0.1821,
   },
-  ZRH: {
-    code: 'ZRH',
-    name: 'Zurich Airport',
+  {
+    code: "ZRH",
+    name: "Zurich Airport",
     latitude: 47.4582,
     longitude: 8.5481,
   },
-  IST: {
-    code: 'IST',
-    name: 'Istanbul Airport',
+  {
+    code: "IST",
+    name: "Istanbul Airport",
     latitude: 41.2753,
     longitude: 28.7519,
   },
-  VIE: {
-    code: 'VIE',
-    name: 'Vienna International',
+  {
+    code: "VIE",
+    name: "Vienna International",
     latitude: 48.1103,
     longitude: 16.5697,
   },
-  CPH: {
-    code: 'CPH',
-    name: 'Copenhagen Airport',
+  {
+    code: "CPH",
+    name: "Copenhagen Airport",
     latitude: 55.618,
     longitude: 12.6508,
   },
-  OSL: {
-    code: 'OSL',
-    name: 'Oslo Gardermoen',
+  {
+    code: "OSL",
+    name: "Oslo Gardermoen",
     latitude: 60.1939,
     longitude: 11.1004,
   },
-  ARN: {
-    code: 'ARN',
-    name: 'Stockholm Arlanda',
+  {
+    code: "ARN",
+    name: "Stockholm Arlanda",
     latitude: 59.6519,
     longitude: 17.9186,
   },
-  DUB: {
-    code: 'DUB',
-    name: 'Dublin Airport',
+  {
+    code: "DUB",
+    name: "Dublin Airport",
     latitude: 53.4213,
     longitude: -6.2701,
   },
-  MAN: {
-    code: 'MAN',
-    name: 'Manchester Airport',
+  {
+    code: "MAN",
+    name: "Manchester Airport",
     latitude: 53.3537,
     longitude: -2.275,
   },
-  EDI: {
-    code: 'EDI',
-    name: 'Edinburgh Airport',
+  {
+    code: "EDI",
+    name: "Edinburgh Airport",
     latitude: 55.95,
     longitude: -3.3725,
   },
-  LIS: {
-    code: 'LIS',
-    name: 'Lisbon Portela',
+  {
+    code: "LIS",
+    name: "Lisbon Portela",
     latitude: 38.7742,
     longitude: -9.1342,
   },
-  ATH: {
-    code: 'ATH',
-    name: 'Athens International',
+  {
+    code: "ATH",
+    name: "Athens International",
     latitude: 37.9364,
     longitude: 23.9445,
   },
-  BRU: {
-    code: 'BRU',
-    name: 'Brussels Airport',
+  {
+    code: "BRU",
+    name: "Brussels Airport",
     latitude: 50.901,
     longitude: 4.4856,
   },
-  PRG: {
-    code: 'PRG',
-    name: 'Prague Vaclav Havel',
+  {
+    code: "PRG",
+    name: "Prague Vaclav Havel",
     latitude: 50.1008,
     longitude: 14.2632,
   },
-  WAW: {
-    code: 'WAW',
-    name: 'Warsaw Chopin',
+  {
+    code: "WAW",
+    name: "Warsaw Chopin",
     latitude: 52.1657,
     longitude: 20.9671,
   },
-  BUD: {
-    code: 'BUD',
-    name: 'Budapest Ferenc Liszt',
+  {
+    code: "BUD",
+    name: "Budapest Ferenc Liszt",
     latitude: 47.4297,
     longitude: 19.2611,
   },
-  VCE: {
-    code: 'VCE',
-    name: 'Venice Marco Polo',
+  {
+    code: "VCE",
+    name: "Venice Marco Polo",
     latitude: 45.5053,
     longitude: 12.3519,
   },
-  MXP: {
-    code: 'MXP',
-    name: 'Milan Malpensa',
+  {
+    code: "MXP",
+    name: "Milan Malpensa",
     latitude: 45.6306,
     longitude: 8.7231,
   },
-  NAP: {
-    code: 'NAP',
-    name: 'Naples International',
+  {
+    code: "NAP",
+    name: "Naples International",
     latitude: 40.886,
     longitude: 14.2908,
   },
-  HND: {
-    code: 'HND',
-    name: 'Tokyo Haneda',
+  {
+    code: "HND",
+    name: "Tokyo Haneda",
     latitude: 35.5494,
     longitude: 139.7798,
   },
-  NRT: {
-    code: 'NRT',
-    name: 'Tokyo Narita',
+  {
+    code: "NRT",
+    name: "Tokyo Narita",
     latitude: 35.772,
     longitude: 140.3929,
   },
-  PEK: {
-    code: 'PEK',
-    name: 'Beijing Capital',
+  {
+    code: "PEK",
+    name: "Beijing Capital",
     latitude: 40.0801,
     longitude: 116.5846,
   },
-  PVG: {
-    code: 'PVG',
-    name: 'Shanghai Pudong',
+  {
+    code: "PVG",
+    name: "Shanghai Pudong",
     latitude: 31.1443,
     longitude: 121.8083,
   },
-  HKG: {
-    code: 'HKG',
-    name: 'Hong Kong International',
+  {
+    code: "HKG",
+    name: "Hong Kong International",
     latitude: 22.308,
     longitude: 113.9185,
   },
-  SIN: {
-    code: 'SIN',
-    name: 'Singapore Changi',
+  {
+    code: "SIN",
+    name: "Singapore Changi",
     latitude: 1.3644,
     longitude: 103.9915,
   },
-  ICN: {
-    code: 'ICN',
-    name: 'Seoul Incheon',
+  {
+    code: "ICN",
+    name: "Seoul Incheon",
     latitude: 37.4602,
     longitude: 126.4407,
   },
-  BKK: {
-    code: 'BKK',
-    name: 'Bangkok Suvarnabhumi',
+  {
+    code: "BKK",
+    name: "Bangkok Suvarnabhumi",
     latitude: 13.69,
     longitude: 100.7501,
   },
-  KUL: {
-    code: 'KUL',
-    name: 'Kuala Lumpur International',
+  {
+    code: "KUL",
+    name: "Kuala Lumpur International",
     latitude: 2.7456,
     longitude: 101.7072,
   },
-  DEL: {
-    code: 'DEL',
-    name: 'Delhi Indira Gandhi',
+  {
+    code: "DEL",
+    name: "Delhi Indira Gandhi",
     latitude: 28.5562,
     longitude: 77.1,
   },
-  BOM: {
-    code: 'BOM',
-    name: 'Mumbai Chhatrapati Shivaji',
+  {
+    code: "BOM",
+    name: "Mumbai Chhatrapati Shivaji",
     latitude: 19.0896,
     longitude: 72.8656,
   },
-  SYD: {
-    code: 'SYD',
-    name: 'Sydney Kingsford Smith',
+  {
+    code: "SYD",
+    name: "Sydney Kingsford Smith",
     latitude: -33.9399,
     longitude: 151.1753,
   },
-  MEL: {
-    code: 'MEL',
-    name: 'Melbourne Airport',
+  {
+    code: "MEL",
+    name: "Melbourne Airport",
     latitude: -37.669,
     longitude: 144.841,
   },
-  AKL: {
-    code: 'AKL',
-    name: 'Auckland Airport',
+  {
+    code: "AKL",
+    name: "Auckland Airport",
     latitude: -37.0082,
     longitude: 174.785,
   },
-  MNL: {
-    code: 'MNL',
-    name: 'Manila Ninoy Aquino',
+  {
+    code: "MNL",
+    name: "Manila Ninoy Aquino",
     latitude: 14.5086,
     longitude: 121.0194,
   },
-  CGK: {
-    code: 'CGK',
-    name: 'Jakarta Soekarno-Hatta',
+  {
+    code: "CGK",
+    name: "Jakarta Soekarno-Hatta",
     latitude: -6.1275,
     longitude: 106.6537,
   },
-  TPE: {
-    code: 'TPE',
-    name: 'Taipei Taoyuan',
+  {
+    code: "TPE",
+    name: "Taipei Taoyuan",
     latitude: 25.0797,
     longitude: 121.2342,
   },
-  CAN: {
-    code: 'CAN',
-    name: 'Guangzhou Baiyun',
+  {
+    code: "CAN",
+    name: "Guangzhou Baiyun",
     latitude: 23.3924,
     longitude: 113.2988,
   },
-  SHA: {
-    code: 'SHA',
-    name: 'Shanghai Hongqiao',
+  {
+    code: "SHA",
+    name: "Shanghai Hongqiao",
     latitude: 31.1979,
     longitude: 121.3364,
   },
-  DXB: {
-    code: 'DXB',
-    name: 'Dubai International',
+  {
+    code: "DXB",
+    name: "Dubai International",
     latitude: 25.2532,
     longitude: 55.3657,
   },
-  DOH: {
-    code: 'DOH',
-    name: 'Doha Hamad International',
+  {
+    code: "DOH",
+    name: "Doha Hamad International",
     latitude: 25.2731,
     longitude: 51.608,
   },
-  AUH: {
-    code: 'AUH',
-    name: 'Abu Dhabi International',
+  {
+    code: "AUH",
+    name: "Abu Dhabi International",
     latitude: 24.433,
     longitude: 54.6511,
   },
-  CAI: {
-    code: 'CAI',
-    name: 'Cairo International',
+  {
+    code: "CAI",
+    name: "Cairo International",
     latitude: 30.1219,
     longitude: 31.4056,
   },
-  TLV: {
-    code: 'TLV',
-    name: 'Tel Aviv Ben Gurion',
+  {
+    code: "TLV",
+    name: "Tel Aviv Ben Gurion",
     latitude: 32.0114,
     longitude: 34.8867,
   },
-  GRU: {
-    code: 'GRU',
-    name: 'Sao Paulo Guarulhos',
+  {
+    code: "GRU",
+    name: "Sao Paulo Guarulhos",
     latitude: -23.4356,
     longitude: -46.4731,
   },
-  GIG: {
-    code: 'GIG',
-    name: 'Rio de Janeiro Galeao',
+  {
+    code: "GIG",
+    name: "Rio de Janeiro Galeao",
     latitude: -22.8099,
     longitude: -43.2505,
   },
-  SCL: {
-    code: 'SCL',
-    name: 'Santiago International',
+  {
+    code: "SCL",
+    name: "Santiago International",
     latitude: -33.393,
     longitude: -70.7858,
   },
-  BOG: {
-    code: 'BOG',
-    name: 'Bogota El Dorado',
+  {
+    code: "BOG",
+    name: "Bogota El Dorado",
     latitude: 4.7016,
     longitude: -74.1469,
   },
-  LIM: {
-    code: 'LIM',
-    name: 'Lima Jorge Chavez',
+  {
+    code: "LIM",
+    name: "Lima Jorge Chavez",
     latitude: -12.0219,
     longitude: -77.1143,
   },
-  EZE: {
-    code: 'EZE',
-    name: 'Buenos Aires Ezeiza',
+  {
+    code: "EZE",
+    name: "Buenos Aires Ezeiza",
     latitude: -34.8222,
     longitude: -58.5358,
   },
-  JNB: {
-    code: 'JNB',
-    name: 'Johannesburg OR Tambo',
+  {
+    code: "JNB",
+    name: "Johannesburg OR Tambo",
     latitude: -26.1392,
     longitude: 28.246,
   },
-  CPT: {
-    code: 'CPT',
-    name: 'Cape Town International',
+  {
+    code: "CPT",
+    name: "Cape Town International",
     latitude: -33.9715,
     longitude: 18.6021,
   },
-  NBO: {
-    code: 'NBO',
-    name: 'Nairobi Jomo Kenyatta',
+  {
+    code: "NBO",
+    name: "Nairobi Jomo Kenyatta",
     latitude: -1.3192,
     longitude: 36.9278,
   },
-  ADD: {
-    code: 'ADD',
-    name: 'Addis Ababa Bole',
+  {
+    code: "ADD",
+    name: "Addis Ababa Bole",
     latitude: 8.9779,
     longitude: 38.7992,
   },
-};
+];
 
-export const airportList = Object.values(airportCatalog);
+export const airportCatalog: Readonly<Record<string, AirportRecord>> =
+  Object.freeze(
+    Object.fromEntries(airportList.map((airport) => [airport.code, airport])),
+  );
 
 export function lookupAirport(code: string): AirportRecord | undefined {
   return airportCatalog[code.trim().toUpperCase()];

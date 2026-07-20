@@ -48,7 +48,6 @@ void main() {
                   temperature: 12,
                   cloudCover: 24,
                   cape: 0,
-                  edr: 0.08,
                 ),
                 TurbulenceWaypoint(
                   waypoint: 1,
@@ -62,7 +61,6 @@ void main() {
                   temperature: 6,
                   cloudCover: 32,
                   cape: 0,
-                  edr: 0.12,
                 ),
                 TurbulenceWaypoint(
                   waypoint: 2,
@@ -76,7 +74,6 @@ void main() {
                   temperature: 0,
                   cloudCover: 46,
                   cape: 12,
-                  edr: 0.25,
                 ),
                 TurbulenceWaypoint(
                   waypoint: 3,
@@ -90,7 +87,6 @@ void main() {
                   temperature: -4,
                   cloudCover: 61,
                   cape: 28,
-                  edr: 0.33,
                 ),
                 TurbulenceWaypoint(
                   waypoint: 4,
@@ -104,7 +100,6 @@ void main() {
                   temperature: -8,
                   cloudCover: 67,
                   cape: 44,
-                  edr: 0.37,
                 ),
                 TurbulenceWaypoint(
                   waypoint: 5,
@@ -118,7 +113,6 @@ void main() {
                   temperature: -2,
                   cloudCover: 70,
                   cape: 58,
-                  edr: 0.44,
                 ),
                 TurbulenceWaypoint(
                   waypoint: 6,
@@ -132,7 +126,6 @@ void main() {
                   temperature: 10,
                   cloudCover: 40,
                   cape: 8,
-                  edr: 0.16,
                 ),
               ],
             ),

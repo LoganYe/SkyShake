@@ -60,6 +60,7 @@ describe('FlightOptionsService', () => {
     const first = service.searchFlights('SFO', 'JFK', '2026-04-22T12:00');
     const second = service.searchFlights('sfo', 'jfk', '2026-04-22T12:00');
 
+    await Promise.resolve();
     expect(calls).toBe(1);
 
     resolveSearch?.([sampleFlight()]);

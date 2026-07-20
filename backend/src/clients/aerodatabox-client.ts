@@ -1,4 +1,4 @@
-import type { BackendConfig } from '../config.js';
+import type { FlightProviderConfig } from '../config.js';
 import type { FlightDataPayload } from '../contracts.js';
 import {
   ConfigurationError,
@@ -7,10 +7,10 @@ import {
 } from '../errors.js';
 
 import type { FlightDataProvider } from './flight-lookup-provider.js';
-
-interface FetchLike {
-  (input: URL | RequestInfo, init?: RequestInit): Promise<Response>;
-}
+import {
+  fetchProviderResponse,
+  type FetchLike,
+} from './provider-request.js';
 
 const RAPIDAPI_BASE_URL = 'https://aerodatabox.p.rapidapi.com';
 const RAPIDAPI_HOST = 'aerodatabox.p.rapidapi.com';
@@ -18,7 +18,7 @@ const APIMARKET_BASE_URL = 'https://prod.api.market/api/v1/aedbx/aerodatabox';
 
 export class AeroDataBoxClient implements FlightDataProvider {
   constructor(
-    private readonly config: BackendConfig,
+    private readonly config: FlightProviderConfig,
     private readonly fetchImpl: FetchLike = fetch,
   ) {}
 
@@ -49,12 +49,17 @@ export class AeroDataBoxClient implements FlightDataProvider {
       flightDate,
     );
 
-    const response = await this.fetchImpl(url, { headers });
+    const { response, bodyText } = await fetchProviderResponse(
+      this.fetchImpl,
+      url,
+      { headers },
+      { provider: 'aerodatabox', displayName: 'AeroDataBox' },
+    );
     if (response.status === 204) {
       return null;
     }
 
-    const { payload, rawText } = await readResponseBody(response);
+    const { payload, rawText } = readResponseBody(bodyText);
     if (response.status === 404 && looksLikeNotFound(payload, rawText)) {
       return null;
     }
@@ -154,8 +159,13 @@ export class AeroDataBoxClient implements FlightDataProvider {
       toLocal,
     );
 
-    const response = await this.fetchImpl(url, { headers });
-    const { payload, rawText } = await readResponseBody(response);
+    const { response, bodyText } = await fetchProviderResponse(
+      this.fetchImpl,
+      url,
+      { headers },
+      { provider: 'aerodatabox', displayName: 'AeroDataBox' },
+    );
+    const { payload, rawText } = readResponseBody(bodyText);
 
     if (response.status === 401 || response.status === 403) {
       throw new UpstreamServiceError(
@@ -231,7 +241,7 @@ export class AeroDataBoxClient implements FlightDataProvider {
 }
 
 function buildLookupRequest(
-  config: BackendConfig,
+  config: FlightProviderConfig,
   apiKey: string,
   normalizedFlightNumber: string,
   flightDate?: string,
@@ -277,7 +287,7 @@ function buildLookupRequest(
 }
 
 function buildAirportLookupRequest(
-  config: BackendConfig,
+  config: FlightProviderConfig,
   apiKey: string,
   departureCode: string,
   fromLocal: string,
@@ -322,8 +332,7 @@ function buildAirportLookupRequest(
   return { url, headers };
 }
 
-async function readResponseBody(response: Response) {
-  const rawText = await response.text();
+function readResponseBody(rawText: string) {
   if (rawText.trim().length === 0) {
     return {
       rawText,

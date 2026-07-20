@@ -165,7 +165,10 @@ void main() {
       expect(result.flights, hasLength(1));
       expect(result.flights.first.flightNumber, 'UA857');
       expect(result.metadata.source, FlightLookupSource.cache);
-      expect(result.metadata.timeWindowStart, DateTime.parse('2026-04-22T09:00'));
+      expect(
+        result.metadata.timeWindowStart,
+        DateTime.parse('2026-04-22T09:00'),
+      );
       expect(result.metadata.timeWindowEnd, DateTime.parse('2026-04-22T15:00'));
     });
   });
@@ -189,7 +192,6 @@ void main() {
             'temperature': 11,
             'cloudCover': 42,
             'cape': 0,
-            'edr': 0.14,
           },
           {
             'waypoint': 1,
@@ -203,7 +205,6 @@ void main() {
             'temperature': 6,
             'cloudCover': 65,
             'cape': 450,
-            'edr': 0.48,
           },
         ],
       });

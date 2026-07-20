@@ -4,6 +4,14 @@ import type {
   FlightOptionsMetadataPayload,
   FlightOptionsResponsePayload,
 } from '../contracts.js';
+import {
+  DEFAULT_MAX_CACHE_ENTRIES,
+} from './bounded-ttl-cache.js';
+import {
+  MemoryCacheStoreFactory,
+  type CacheStore,
+  type CacheStoreFactory,
+} from './cache-store.js';
 
 const DEFAULT_OPTIONS_TTL_MS = 60_000;
 
@@ -21,6 +29,8 @@ interface CacheEntry {
 interface FlightOptionsServiceOptions {
   now?: () => number;
   ttlMs?: number;
+  maxCacheEntries?: number;
+  cacheStoreFactory?: CacheStoreFactory;
 }
 
 export class FlightOptionsService {
@@ -31,11 +41,17 @@ export class FlightOptionsService {
   ) {
     this._now = options.now ?? Date.now;
     this.ttlMs = options.ttlMs ?? DEFAULT_OPTIONS_TTL_MS;
+    const cacheStoreFactory =
+      options.cacheStoreFactory ??
+      new MemoryCacheStoreFactory(
+        options.maxCacheEntries ?? DEFAULT_MAX_CACHE_ENTRIES,
+      );
+    this.cache = cacheStoreFactory.create<CacheEntry>('flight-options');
   }
 
   private readonly _now: () => number;
   private readonly ttlMs: number;
-  private readonly cache = new Map<string, CacheEntry>();
+  private readonly cache: CacheStore<CacheEntry>;
   private readonly inFlight = new Map<string, Promise<FlightOptionsResponsePayload>>();
 
   async searchFlights(
@@ -51,7 +67,7 @@ export class FlightOptionsService {
       normalizedArrival,
       normalizedLocal,
     );
-    const cachedEntry = this.readCache(cacheKey);
+    const cachedEntry = await this.readCache(cacheKey);
     if (cachedEntry) {
       return buildResponse(cachedEntry, this.providerName, 'cache');
     }
@@ -99,20 +115,12 @@ export class FlightOptionsService {
       timeWindowStart: fromLocal,
       timeWindowEnd: toLocal,
     };
-    this.cache.set(cacheKey, entry);
+    await this.cache.set(cacheKey, entry, this.ttlMs);
     return buildResponse(entry, this.providerName, 'live');
   }
 
   private readCache(cacheKey: string) {
-    const cached = this.cache.get(cacheKey);
-    if (!cached) {
-      return null;
-    }
-    if (cached.expiresAtMs <= this._now()) {
-      this.cache.delete(cacheKey);
-      return null;
-    }
-    return cached;
+    return this.cache.get(cacheKey, this._now());
   }
 }
 

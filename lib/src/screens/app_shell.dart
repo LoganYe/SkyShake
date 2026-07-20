@@ -26,10 +26,7 @@ class _AppShellState extends State<AppShell> {
     return Container(
       decoration: const BoxDecoration(gradient: AppTheme.backgroundGradient),
       child: Scaffold(
-        appBar: AppBar(
-          titleSpacing: 18,
-          title: const Text(Brand.name),
-        ),
+        appBar: AppBar(titleSpacing: 18, title: const Text(Brand.name)),
         body: IndexedStack(
           index: _selectedIndex,
           children: [

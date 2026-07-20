@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:skyshake/src/models/flight_models.dart';
 import 'package:skyshake/src/repositories/tracking_repository.dart';
@@ -43,6 +45,34 @@ void main() {
       expect(result, isNull);
       expect(store.latestResult, isNull);
       expect(store.error?.code, 'weather_upstream_failed');
+      draft.dispose();
+      store.dispose();
+    });
+
+    test('ignores overlapping route analysis requests', () async {
+      final completer = Completer<RouteAnalysisResult>();
+      var calls = 0;
+      final store = RouteAnalysisStore(
+        _FakeTrackingRepository(
+          analyzeRouteHandler: (_) {
+            calls += 1;
+            return completer.future;
+          },
+        ),
+      );
+      final draft = RouteDraftStore();
+
+      final firstRequest = store.runAnalysis(draft);
+      final secondResult = await store.runAnalysis(draft);
+
+      expect(secondResult, isNull);
+      expect(calls, 1);
+      expect(store.isLoading, isTrue);
+
+      completer.complete(_sampleRouteAnalysis());
+      expect(await firstRequest, isNotNull);
+      expect(store.isLoading, isFalse);
+
       draft.dispose();
       store.dispose();
     });
@@ -114,7 +144,6 @@ RouteAnalysisResult _sampleRouteAnalysis() {
           temperature: 11,
           cloudCover: 26,
           cape: 20,
-          edr: 0.12,
         ),
       ],
     ),

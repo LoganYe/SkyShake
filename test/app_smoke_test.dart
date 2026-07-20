@@ -272,7 +272,6 @@ RouteAnalysisResult _sampleRouteAnalysis() {
           temperature: 11,
           cloudCover: 26,
           cape: 20,
-          edr: 0.12,
         ),
         TurbulenceWaypoint(
           waypoint: 1,
@@ -286,7 +285,6 @@ RouteAnalysisResult _sampleRouteAnalysis() {
           temperature: 4,
           cloudCover: 58,
           cape: 240,
-          edr: 0.31,
         ),
         TurbulenceWaypoint(
           waypoint: 2,
@@ -300,7 +298,6 @@ RouteAnalysisResult _sampleRouteAnalysis() {
           temperature: 7,
           cloudCover: 47,
           cape: 110,
-          edr: 0.24,
         ),
       ],
     ),

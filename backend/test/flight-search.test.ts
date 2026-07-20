@@ -9,6 +9,19 @@ describe('flight search endpoint', () => {
     const app = buildApp({
       host: '127.0.0.1',
       port: 8787,
+      runtimeEnvironment: 'test',
+      redisUrl: null,
+      appAttest: {
+        mode: 'disabled',
+        teamId: null,
+        bundleId: null,
+        allowDevelopmentEnvironment: true,
+      },
+      logLevel: 'silent',
+      trustProxyHops: 0,
+      corsAllowedOrigins: [],
+      providerRateLimit: { max: 30, timeWindowMs: 60_000 },
+      routeAnalysisTimeoutMs: 18_000,
       appStoreUrl: null,
       flightProvider: 'aerodatabox',
       aeroDataBox: {
@@ -234,6 +247,19 @@ function disabledFlightConfig() {
   return {
     host: '127.0.0.1',
     port: 8787,
+    runtimeEnvironment: 'test' as const,
+    redisUrl: null,
+    appAttest: {
+      mode: 'disabled' as const,
+      teamId: null,
+      bundleId: null,
+      allowDevelopmentEnvironment: true,
+    },
+    logLevel: 'silent' as const,
+    trustProxyHops: 0,
+    corsAllowedOrigins: [],
+    providerRateLimit: { max: 30, timeWindowMs: 60_000 },
+    routeAnalysisTimeoutMs: 18_000,
     appStoreUrl: null,
     flightProvider: 'none' as const,
     aeroDataBox: {

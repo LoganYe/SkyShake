@@ -6,6 +6,19 @@ import type { WeatherProvider } from '../src/services/turbulence.js';
 const noFlightProviderConfig = {
   host: '127.0.0.1',
   port: 8787,
+  runtimeEnvironment: 'test' as const,
+  redisUrl: null,
+  appAttest: {
+    mode: 'disabled' as const,
+    teamId: null,
+    bundleId: null,
+    allowDevelopmentEnvironment: true,
+  },
+  logLevel: 'silent' as const,
+  trustProxyHops: 0,
+  corsAllowedOrigins: [],
+  providerRateLimit: { max: 30, timeWindowMs: 60_000 },
+  routeAnalysisTimeoutMs: 18_000,
   appStoreUrl: null,
   flightProvider: 'none' as const,
   aeroDataBox: {
@@ -30,8 +43,39 @@ describe('node landing page', () => {
     expect(response.body).toContain('SkyShake mobile app');
     expect(response.body).toContain('Download on the App Store');
     expect(response.body).toContain('Try the live route preview');
-    expect(response.body).toContain('/v1/route-analysis/airports');
+    expect(response.body).toContain('/v1/public/route-analysis/airports');
     expect(response.body).toContain('https://apps.apple.com/us/search?term=SkyShake');
+    const contentSecurityPolicy = response.headers['content-security-policy'];
+    expect(contentSecurityPolicy).toContain("default-src 'none'");
+    expect(contentSecurityPolicy).toContain("connect-src 'self'");
+    expect(contentSecurityPolicy).toContain("frame-ancestors 'none'");
+    expect(contentSecurityPolicy).toContain("style-src-attr 'none'");
+    expect(contentSecurityPolicy).not.toContain('unsafe-inline');
+    expect(contentSecurityPolicy).not.toContain('unsafe-eval');
+    const nonce = contentSecurityPolicy?.match(/script-src 'nonce-([^']+)'/)?.[1];
+    expect(nonce).toBeTruthy();
+    expect(response.body).toContain(`<style nonce="${nonce}">`);
+    expect(response.body).toContain(`<script nonce="${nonce}">`);
+    expect(response.body).not.toContain('innerHTML');
+    expect(response.headers['x-content-type-options']).toBe('nosniff');
+    expect(response.headers['x-frame-options']).toBe('DENY');
+    expect(response.headers['referrer-policy']).toBe('no-referrer');
+    expect(response.headers['permissions-policy']).toBe(
+      'camera=(), geolocation=(), microphone=()',
+    );
+
+    await app.close();
+  });
+
+  test('uses a fresh CSP nonce for each landing response', async () => {
+    const app = buildApp(noFlightProviderConfig);
+
+    const first = await app.inject({ method: 'GET', url: '/' });
+    const second = await app.inject({ method: 'GET', url: '/' });
+
+    expect(first.headers['content-security-policy']).not.toBe(
+      second.headers['content-security-policy'],
+    );
 
     await app.close();
   });
@@ -64,8 +108,8 @@ describe('node landing page', () => {
           windShear: 14,
           temperature: 5,
           cloudCover: 61,
-          upperWind80: 66,
-          upperWind120: 82,
+          cape: 420,
+          cruiseWindSpeed: 82,
         };
       },
     };
@@ -73,7 +117,7 @@ describe('node landing page', () => {
 
     const response = await app.inject({
       method: 'POST',
-      url: '/v1/route-analysis/airports',
+      url: '/v1/public/route-analysis/airports',
       payload: {
         departureCode: 'sfo',
         arrivalCode: 'jfk',

@@ -26,20 +26,10 @@ class BackendTrackingRepository implements TrackingRepository {
     }
 
     final response = await _client.postJson(
-      '/v1/route-analysis',
+      '/v1/route-analysis/airports',
       body: {
-        'departure': {
-          'code': departure.code,
-          'name': departure.name,
-          'latitude': departure.latitude,
-          'longitude': departure.longitude,
-        },
-        'arrival': {
-          'code': arrival.code,
-          'name': arrival.name,
-          'latitude': arrival.latitude,
-          'longitude': arrival.longitude,
-        },
+        'departureCode': departure.code,
+        'arrivalCode': arrival.code,
         'aircraftType':
             query.aircraftType.trim().isEmpty
                 ? 'Boeing 737 MAX 8'

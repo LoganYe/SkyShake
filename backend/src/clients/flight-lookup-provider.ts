@@ -1,4 +1,4 @@
-import type { BackendConfig } from '../config.js';
+import type { FlightProviderConfig } from '../config.js';
 import type { FlightDataPayload } from '../contracts.js';
 import { ConfigurationError } from '../errors.js';
 
@@ -19,7 +19,7 @@ export interface FlightDataProvider {
 }
 
 export function createFlightDataProvider(
-  config: BackendConfig,
+  config: FlightProviderConfig,
 ): FlightDataProvider {
   switch (config.flightProvider) {
     case 'none':

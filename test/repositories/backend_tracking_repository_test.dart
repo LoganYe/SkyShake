@@ -64,7 +64,6 @@ void main() {
                         'temperature': 8,
                         'cloudCover': 42,
                         'cape': 120,
-                        'edr': 0.22,
                       },
                       {
                         'waypoint': 1,
@@ -78,7 +77,6 @@ void main() {
                         'temperature': 3,
                         'cloudCover': 61,
                         'cape': 380,
-                        'edr': 0.37,
                       },
                     ],
                   },
@@ -96,16 +94,12 @@ void main() {
           ),
         );
 
-        expect(requestedPath, '/v1/route-analysis');
-        expect(requestedBody, isA<Map<String, dynamic>>());
-        expect(
-          (requestedBody as Map<String, dynamic>)['departure']['code'],
-          'SFO',
-        );
-        expect(
-          (requestedBody as Map<String, dynamic>)['arrival']['code'],
-          'JFK',
-        );
+        expect(requestedPath, '/v1/route-analysis/airports');
+        expect(requestedBody, {
+          'departureCode': 'SFO',
+          'arrivalCode': 'JFK',
+          'aircraftType': 'Boeing 787-9',
+        });
         expect(result.flightData.isMockData, isFalse);
         expect(result.report.totalWaypoints, 2);
         expect(result.notice, 'Live backend estimate.');

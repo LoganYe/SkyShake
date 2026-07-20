@@ -356,8 +356,7 @@ class FlightOptionsResult {
     return FlightOptionsResult(
       departureCode: json['departureCode']?.toString() ?? '',
       arrivalCode: json['arrivalCode']?.toString() ?? '',
-      departureLocal:
-          _toDateTime(json['departureLocal']) ?? DateTime.now(),
+      departureLocal: _toDateTime(json['departureLocal']) ?? DateTime.now(),
       flights: rawFlights,
       notFound: json['notFound'] == true,
       metadata: FlightOptionsMetadata.fromJson(
@@ -400,7 +399,6 @@ class TurbulenceWaypoint {
     required this.temperature,
     required this.cloudCover,
     required this.cape,
-    required this.edr,
   });
 
   factory TurbulenceWaypoint.fromJson(Map<String, dynamic> json) {
@@ -416,7 +414,6 @@ class TurbulenceWaypoint {
       temperature: _toDouble(json['temperature']) ?? 0,
       cloudCover: _toDouble(json['cloudCover']) ?? 0,
       cape: _toDouble(json['cape']) ?? 0,
-      edr: _toDouble(json['edr']) ?? 0,
     );
   }
 
@@ -431,7 +428,6 @@ class TurbulenceWaypoint {
   final double temperature;
   final double cloudCover;
   final double cape;
-  final double edr;
 
   Map<String, dynamic> toJson() {
     return {
@@ -446,7 +442,6 @@ class TurbulenceWaypoint {
       'temperature': temperature,
       'cloudCover': cloudCover,
       'cape': cape,
-      'edr': edr,
     };
   }
 }
